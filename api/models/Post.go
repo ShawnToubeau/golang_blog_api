@@ -73,7 +73,7 @@ func (p *Post) FindAllPosts(db *gorm.DB) (*[]Post, error) {
 	return &posts, nil
 }
 
-func (p *Post) FindPostById(db *gorm.DB, pid int64) (*Post, error) {
+func (p *Post) FindPostById(db *gorm.DB, pid uint64) (*Post, error) {
 	var err error
 	err = db.Debug().Model(&Post{}).Where("id = ?", pid).Take(&p).Error
 	if err != nil {
