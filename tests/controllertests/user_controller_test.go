@@ -30,50 +30,50 @@ func TestCreateUser(t *testing.T) {
 		{
 			`{"nickname": "Shawn", "email": "shawn@aol.com", "password": "123"}`,
 			201,
-			"shawn",
+			"Shawn",
 			"shawn@aol.com",
 			"",
 		},
 		{
 			`{"nickname": "Aria", "email": "shawn@aol.com", "password": "321"}`,
 			500,
-			nil,
-			nil,
+			"Aria",
+			"shawn@aol.com",
 			"Email Already Taken",
 		},
 		{
 			`{"nickname": "Shawn", "email": "aria@aol.com", "password": "321"}`,
 			500,
-			nil,
-			nil,
+			"Shawn",
+			"aria@aol.com",
 			"Nickname Already Taken",
 		},
 		{
-			`{"nickname": "", "email": "aria@aol.com", "password": "321"}`,
+			`{"nickname": "Aria", "email": "", "password": "321"}`,
 			422,
-			nil,
-			nil,
-			"Invalid Email",
+			"Aria",
+			"",
+			"Required Email",
 		},
 		{
 			`{"nickname": "", "email": "aria@aol.com", "password": "321"}`,
 			422,
-			nil,
-			nil,
+			"",
+			"aria@aol.com",
 			"Required Nickname",
 		},
 		{
 			`{"nickname": "Aria", "email": "", "password": "321"}`,
 			422,
-			nil,
-			nil,
+			"Aria",
+			"",
 			"Required Email",
 		},
 		{
 			`{"nickname": "Aria", "email": "aria@aol.com", "password": ""}`,
 			422,
-			nil,
-			nil,
+			"Aria",
+			"aria@aol.com",
 			"Required Password",
 		},
 	}
@@ -93,7 +93,7 @@ func TestCreateUser(t *testing.T) {
 		responseMap := make(map[string]interface{})
 		err = json.Unmarshal([]byte(rr.Body.String()), &responseMap)
 		if err != nil {
-			fmt.Printf("Cannot convert to JSON: %v\n")
+			fmt.Printf("Cannot convert to JSON: %v\n", err)
 		}
 		assert.Equal(t, rr.Code, v.statusCode)
 		if v.statusCode == 201 {
@@ -161,14 +161,14 @@ func TestGetUserById(t *testing.T) {
 			200,
 			user.Nickname,
 			user.Email,
-			nil,
+			"",
 		},
 		{
 			"unknown",
 			400,
-			nil,
-			nil,
-			nil,
+			"",
+			"",
+			"",
 		},
 	}
 
@@ -204,7 +204,7 @@ func TestUpdateUser(t *testing.T) {
 	var AuthID uint32
 
 	// Refresh user table
-	err := refreshUserTable();
+	err := refreshUserTable()
 	if err != nil {
 		log.Fatalf("Failed to refresh user table: %v\n", err)
 	}
@@ -214,14 +214,9 @@ func TestUpdateUser(t *testing.T) {
 		log.Fatalf("Failed to seed user table: %v\n", err)
 	}
 	// Retrieve first user
-	for _, user := range users {
-		if user.ID == 2 {
-			continue
-		}
-		AuthID = user.ID
-		AuthEmail = user.Email
-		AuthPassword = user.Password
-	}
+	AuthID = users[0].ID
+	AuthEmail = users[0].Email
+	AuthPassword = "123"
 	// Login user to retrieve auth token
 	token, err := server.SignIn(AuthEmail, AuthPassword)
 	if err != nil {
@@ -244,18 +239,18 @@ func TestUpdateUser(t *testing.T) {
 			strconv.Itoa(int(AuthID)),
 			`{"nickname": "Shawn", "email": "shawn@aol.com", "password": "123"}`,
 			200,
-			"Swan",
-			"swan@aol.com",
+			"Shawn",
+			"shawn@aol.com",
 			tokenString,
-			nil,
+			"",
 		},
 		// Empty password field
 		{
 			strconv.Itoa(int(AuthID)),
 			`{"nickname": "Shawn", "email": "shawn@aol.com", "password": ""}`,
 			422,
-			"Swan",
-			"swan@aol.com",
+			"Shawn",
+			"shawn@aol.com",
 			tokenString,
 			"Required Password",
 		},
@@ -263,8 +258,8 @@ func TestUpdateUser(t *testing.T) {
 		{
 			strconv.Itoa(int(AuthID)),
 			`{"nickname": "Shawn", "email": "shawn@aol.com", "password": "123"}`,
-			200,
-			"Swan",
+			401,
+			"Shawn",
 			"swan@aol.com",
 			"",
 			"Unauthorized",
@@ -274,7 +269,7 @@ func TestUpdateUser(t *testing.T) {
 			strconv.Itoa(int(AuthID)),
 			`{"nickname": "Shawn", "email": "shawn@aol.com", "password": "123"}`,
 			401,
-			"Swan",
+			"Shawn",
 			"swan@aol.com",
 			"wrong token",
 			"Unauthorized",
@@ -284,7 +279,7 @@ func TestUpdateUser(t *testing.T) {
 			strconv.Itoa(int(AuthID)),
 			`{"nickname": "Shawn", "email": "shawn@aol.com", "password": "123"}`,
 			500,
-			"Swan",
+			"Shawn",
 			"aria@aol.com",
 			tokenString,
 			"Email Already Taken",
@@ -293,7 +288,7 @@ func TestUpdateUser(t *testing.T) {
 		{
 			strconv.Itoa(int(AuthID)),
 			`{"nickname": "Shawn", "email": "shawn@aol.com", "password": "123"}`,
-			200,
+			401,
 			"Aria",
 			"swan@aol.com",
 			tokenString,
@@ -304,8 +299,8 @@ func TestUpdateUser(t *testing.T) {
 			strconv.Itoa(int(AuthID)),
 			`{"nickname": "Shawn", "email": "shawn@aol.com", "password": "123"}`,
 			422,
-			"Swan",
-			nil,
+			"Shawn",
+			"",
 			tokenString,
 			"Invalid Email",
 		},
@@ -314,8 +309,8 @@ func TestUpdateUser(t *testing.T) {
 			strconv.Itoa(int(AuthID)),
 			`{"nickname": "Shawn", "email": "", "password": "123"}`,
 			422,
-			nil,
-			nil,
+			"",
+			"",
 			tokenString,
 			"Required Email",
 		},
@@ -324,31 +319,156 @@ func TestUpdateUser(t *testing.T) {
 			strconv.Itoa(int(AuthID)),
 			`{"nickname": "", "email": "shawn@aol.com", "password": "123"}`,
 			422,
-			nil,
-			nil,
+			"",
+			"",
 			tokenString,
 			"Required Nickname",
 		},
 		// No ID
 		{
-			nil,
-			nil,
+			"",
+			"",
 			400,
-			nil,
-			nil,
+			"",
+			"",
 			tokenString,
-			nil,
+			"",
 		},
 		// Using other user's token
 		{
 			strconv.Itoa(int(2)),
 			`{"nickname": "Shawn", "email": "shawn@aol.com", "password": "123"}`,
 			401,
-			nil,
-			nil,
+			"",
+			"",
 			tokenString,
 			"Unauthorized",
 		},
+	}
 
+	for _, v := range samples {
+		// Create request
+		urlStr := fmt.Sprintf("/users?token=%v", token)
+		req, err := http.NewRequest("POST", urlStr, bytes.NewBufferString(v.updateJSON))
+		if err != nil {
+			t.Errorf("Failed to create request: %v\n", err)
+		}
+		req = mux.SetURLVars(req, map[string]string{"id": v.id})
+
+
+
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(server.UpdateUserById)
+		req.Header.Set("Authorization", v.tokenGiven)
+
+		fmt.Printf("req %v\n", req)
+
+		handler.ServeHTTP(rr, req)
+
+		responseMap := make(map[string]interface{})
+		err = json.Unmarshal([]byte(rr.Body.String()), &responseMap)
+		if err != nil {
+			t.Errorf("Cannot convert to JSON: %v\n", err)
+		}
+
+		fmt.Printf("res map %v\n", responseMap)
+
+		assert.Equal(t, rr.Code, v.statusCode)
+
+		if v.statusCode == 200 {
+			assert.Equal(t, responseMap["nickname"], v.updateNickname)
+			assert.Equal(t, responseMap["email"], v.updateEmail)
+		}
+		if v.statusCode == 401 || v.statusCode == 422 || v.statusCode == 500 && v.errorMessage != "" {
+			assert.Equal(t, responseMap["error"], v.errorMessage)
+		}
+	}
+}
+
+func TestDeleteUser(t *testing.T) {
+	var AuthEmail, AuthPassword string
+	var AuthId uint32
+
+	// Refresh user table
+	err := refreshUserTable()
+	if err != nil {
+		log.Fatalf("Failed to refresh user table: %v\n", err)
+	}
+	// Seed users
+	users, err := seedUsers()
+	if err != nil {
+		log.Fatalf("Failed to see users: %v\n", err)
+	}
+	// Get first users credentials
+		AuthId = users[0].ID
+		AuthEmail = users[0].Email
+		AuthPassword = users[0].Password
+	// Login in the user to get their auth token
+	token, err := server.SignIn(AuthEmail, AuthPassword)
+	if err != nil {
+		log.Fatalf("Failed to login user: %v\n", err)
+	}
+	tokenString := fmt.Sprintf("Bearer %v", token)
+
+	userSample := []struct{
+		id string
+		tokenGiven string
+		stateCode int
+		errorMessage string
+	} {
+		{
+			strconv.Itoa(int(AuthId)),
+			tokenString,
+			204,
+			"",
+		},
+		{
+			strconv.Itoa(int(AuthId)),
+			"",
+			401,
+			"Unauthorized",
+		},
+		{
+			strconv.Itoa(int(AuthId)),
+			"Incorrect token",
+			401,
+			"Unauthorized",
+		},
+		{
+			"",
+			tokenString,
+			400,
+			"",
+		},
+		{
+			strconv.Itoa(int(2)),
+			tokenString,
+			401,
+			"Unauthorized",
+		},
+	}
+
+	for _, v := range userSample {
+		req, err := http.NewRequest("GET", "/users", nil)
+		if err != nil {
+			t.Errorf("Failed to create request: %v\n", err)
+		}
+		req = mux.SetURLVars(req, map[string]string{"id": v.id})
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(server.DeleteUserById)
+
+		req.Header.Set("Authorization", v.tokenGiven)
+
+		handler.ServeHTTP(rr, req)
+		assert.Equal(t, rr.Code, v.stateCode)
+
+		if v.stateCode == 401 && v.errorMessage != "" {
+			responseMap := make(map[string]interface{})
+			err = json.Unmarshal([]byte(rr.Body.String()), &responseMap)
+			if err != nil {
+				t.Errorf("Cannot convert to json: %v\n", err)
+			}
+			assert.Equal(t, responseMap["error"], v.errorMessage)
+		}
 	}
 }
