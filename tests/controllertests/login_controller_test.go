@@ -45,7 +45,7 @@ func TestSignIn(t *testing.T) {
 	}
 
 	for _, v := range mockData {
-		token, err := server.SignIn(v.email, v.password)
+		token, err := server.AuthenticateCredentials(v.email, v.password)
 		if err != nil {
 			assert.Equal(t, err, errors.New(v.errorMessage))
 		} else {

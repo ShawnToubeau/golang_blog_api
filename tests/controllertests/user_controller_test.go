@@ -218,7 +218,7 @@ func TestUpdateUser(t *testing.T) {
 	AuthEmail = users[0].Email
 	AuthPassword = "123"
 	// Login user to retrieve auth token
-	token, err := server.SignIn(AuthEmail, AuthPassword)
+	token, err := server.AuthenticateCredentials(AuthEmail, AuthPassword)
 	if err != nil {
 		log.Fatalf("Failed to login user: %v\n", err)
 	}
@@ -404,7 +404,7 @@ func TestDeleteUser(t *testing.T) {
 		AuthEmail = users[0].Email
 		AuthPassword = users[0].Password
 	// Login in the user to get their auth token
-	token, err := server.SignIn(AuthEmail, AuthPassword)
+	token, err := server.AuthenticateCredentials(AuthEmail, AuthPassword)
 	if err != nil {
 		log.Fatalf("Failed to login user: %v\n", err)
 	}
