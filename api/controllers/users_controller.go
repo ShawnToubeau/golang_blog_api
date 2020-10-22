@@ -48,7 +48,7 @@ func (server *Server) InsertUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // Route handler for fetching all users.
-func (server *Server) FetchAllUsers(w http.ResponseWriter, r *http.Request) {
+func (server *Server) FetchAllUsers(w http.ResponseWriter, _ *http.Request) {
 	// create user model interface
 	user := models.User{}
 	// fetch all users
@@ -107,7 +107,7 @@ func (server *Server) UpdateUserById(w http.ResponseWriter, r *http.Request) {
 	// extract auth token
 	tokenId, err := auth.ExtractTokenID(r)
 	if err != nil {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
+		responses.ERROR(w, http.StatusUnauthorized, errors.New("unauthorized"))
 		return
 	}
 	// check if auth token matches the user token in the request
@@ -147,7 +147,7 @@ func (server *Server) DeleteUserById(w http.ResponseWriter, r *http.Request) {
 	// extract auth token ID
 	tokenID, err := auth.ExtractTokenID(r)
 	if err != nil {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorizerd"))
+		responses.ERROR(w, http.StatusUnauthorized, errors.New("unauthorized"))
 		return
 	}
 	// verify the auth token ID matches the user ID
