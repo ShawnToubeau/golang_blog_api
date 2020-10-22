@@ -8,6 +8,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
+// Post object
 type Post struct {
 	ID uint64 `gorm:"primary_key;auto_increment" json:"id"`
 	Title string `gorm:"size:255;not null;unique" json:"title"`
@@ -18,6 +19,8 @@ type Post struct {
 	UpdatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
 
+// Prepares the post object before use. Trims white space from title and content.
+// Sets created and updated times to the current time.
 func (p *Post) Prepare() {
 	p.ID = 0
 	p.Title = html.EscapeString(strings.TrimSpace(p.Title))
@@ -27,25 +30,28 @@ func (p *Post) Prepare() {
 	p.UpdatedAt = time.Now()
 }
 
+// Validates post objects for a title, content, and an author ID.
 func (p *Post) Validate() error {
 	if p.Title == "" {
-		return errors.New("Required Title")
+		return errors.New("title required")
 	}
 	if p.Content == "" {
-		return errors.New("Required Content")
+		return errors.New("content required")
 	}
 	if p.AuthorID < 1 {
-		return errors.New("Required Author")
+		return errors.New("author required")
 	}
 	return nil
 }
 
-func (p *Post) SavePost(db *gorm.DB) (*Post, error) {
-	var err error
-	err = db.Debug().Model(&Post{}).Create(&p).Error
+// Create a new post entry. Returns the created post and linked author.
+func (p *Post) InsertPost(db *gorm.DB) (*Post, error) {
+	// create post
+	err := db.Debug().Model(&Post{}).Create(&p).Error
 	if err != nil {
 		return &Post{}, err
 	}
+	// fetch the user associated with the new post and set the author data on the post object
 	if p.ID != 0 {
 		err = db.Debug().Model(&User{}).Where("id = ?", p.AuthorID).Take(&p.Author).Error
 		if err != nil {
@@ -55,14 +61,15 @@ func (p *Post) SavePost(db *gorm.DB) (*Post, error) {
 	return p, nil
 }
 
-func (p *Post) FindAllPosts(db *gorm.DB) (*[]Post, error) {
-	var err error
-	posts := []Post{}
-	err = db.Debug().Model(&Post{}).Limit(100).Find(&posts).Error
+// Fetches all posts. Limit to first 100.
+func (p *Post) FetchAllPosts(db *gorm.DB) (*[]Post, error) {
+	var posts []Post
+	err := db.Debug().Model(&Post{}).Limit(100).Find(&posts).Error
 	if err != nil {
 		return &[]Post{}, err
 	}
 	if len(posts) > 0 {
+		// loop over all posts and fetch their associated authors
 		for i, _ := range posts {
 			err := db.Debug().Model(&User{}).Where("id = ?", posts[i].AuthorID).Take(&posts[i].Author).Error
 			if err != nil {
@@ -73,13 +80,14 @@ func (p *Post) FindAllPosts(db *gorm.DB) (*[]Post, error) {
 	return &posts, nil
 }
 
-func (p *Post) FindPostById(db *gorm.DB, pid uint64) (*Post, error) {
-	var err error
-	err = db.Debug().Model(&Post{}).Where("id = ?", pid).Take(&p).Error
+// Fetch post by a specific ID.
+func (p *Post) FetchPostById(db *gorm.DB, pid uint64) (*Post, error) {
+	err := db.Debug().Model(&Post{}).Where("id = ?", pid).Take(&p).Error
 	if err != nil {
 		return &Post{}, err
 	}
 	if p.ID != 0 {
+		// fetch the post's author info
 		err = db.Debug().Model(&User{}).Where("id = ?", p.AuthorID).Take(&p.Author).Error
 		if err != nil {
 			return &Post{}, err
@@ -88,9 +96,10 @@ func (p *Post) FindPostById(db *gorm.DB, pid uint64) (*Post, error) {
 	return p, nil
 }
 
+// Update post by a specific ID.
 func (p *Post) UpdatePostById(db *gorm.DB) (*Post, error) {
-	var err error
-	err = db.Debug().Model(&Post{}).Where("id = ?", p.ID).Updates(
+	// update the post's title and content
+	err := db.Debug().Model(&Post{}).Where("id = ?", p.ID).Updates(
 		Post{
 			Title: p.Title,
 			Content: p.Content,
@@ -99,7 +108,9 @@ func (p *Post) UpdatePostById(db *gorm.DB) (*Post, error) {
 	if err != nil {
 		return &Post{}, err
 	}
+
 	if p.ID != 0 {
+		// fetch the post's author info
 		err = db.Debug().Model(&User{}).Where("id = ?", p.AuthorID).Take(&p.Author).Error
 		if err != nil {
 			return &Post{}, err
@@ -108,11 +119,13 @@ func (p *Post) UpdatePostById(db *gorm.DB) (*Post, error) {
 	return p, nil
 }
 
+// Delete post by a specific ID.
 func (p *Post) DeletePostById(db *gorm.DB, pid uint64, uid uint32) (int64, error) {
-	db = db.Debug().Model(&Post{}).Where("id = ? and author_id", pid, uid).Take(&Post{}).Delete(&Post{})
+	// delete post with matching ID and author ID
+	db = db.Debug().Model(&Post{}).Where("id = ? and author_id = ?", pid, uid).Take(&Post{}).Delete(&Post{})
 	if db.Error != nil {
 		if gorm.IsRecordNotFoundError(db.Error) {
-			return 0, errors.New("Post not found")
+			return 0, errors.New("post not found")
 		}
 		return 0, db.Error
 	}

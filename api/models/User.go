@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// User object
 type User struct {
 	ID uint32 `gorm:"primary_key;auto_increment" json:"id"`
 	Nickname string `gorm:"size:255;not null;unique" json:"nickname"`
@@ -20,14 +21,17 @@ type User struct {
 	UpdatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
 
+// Hash the user's password.
 func Hash(password string) ([]byte, error) {
 	return bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 }
 
+// Compares a hashed password against a password stored in the database.
 func VerifyPassword(hashedPassword, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
 
+// Hashes a user's password right before they are inserted/updated in the database.
 func (u *User) BeforeSave() error {
 	hashedPassword, err := Hash(u.Password)
 	if err != nil {
@@ -37,6 +41,8 @@ func (u *User) BeforeSave() error {
 	return nil
 }
 
+// Prepares a user object before use. Trims white space from nickname and email.
+// Sets created and updated times to the current time.
 func (u *User) Prepare() {
 	u.ID = 0
 	u.Nickname = html.EscapeString(strings.TrimSpace(u.Nickname))
@@ -45,74 +51,109 @@ func (u *User) Prepare() {
 	u.UpdatedAt = time.Now()
 }
 
+// Check to see if nickname isn't empty.
+func CheckNickname(nickname string) error {
+	if nickname == "" {
+		return errors.New("nickname required")
+	}
+
+	return nil
+}
+
+// Check to see if password isn't empty.
+func CheckPassword(password string) error {
+	if password == "" {
+		return errors.New("password required")
+	}
+
+	return nil
+}
+
+// Check to see if email isn't empty and is a valid format.
+func CheckEmail(email string) error {
+	if email == "" {
+		return errors.New("email required")
+	}
+
+	if err := checkmail.ValidateFormat(email); err != nil {
+		return errors.New("invalid email format")
+	}
+
+	return nil
+}
+
+// Helper function which validates user fields. Pre-defined validation sequences:
+//
+// 1. update - nickname, password, email
+//
+// 2. login - password, email
+//
+// 3. default - nickname, password, email
 func (u *User) Validate(action string) error {
+	var err error
+
 	switch strings.ToLower(action) {
 	case "update":
-		if u.Nickname == "" {
-			return errors.New("Required Nickname")
+		if err = CheckNickname(u.Nickname); err != nil {
+			return err
 		}
-		if u.Password == "" {
-			return errors.New("Required Password")
+		if err = CheckPassword(u.Password); err != nil {
+			return err
 		}
-		if u.Email == "" {
-			return errors.New("Required Email")
-		}
-		if err := checkmail.ValidateFormat(u.Email); err != nil {
-			return errors.New("Invalid Email")
+		if err = CheckEmail(u.Email); err != nil {
+			return err
 		}
 
 		return nil
 
 	case "login":
-		if u.Password == "" {
-			return errors.New("Required Password")
+		if err = CheckPassword(u.Password); err != nil {
+			return err
 		}
-		if u.Email == "" {
-			return errors.New("Required Email")
+		if err = CheckEmail(u.Email); err != nil {
+			return err
 		}
-		if err := checkmail.ValidateFormat(u.Email); err != nil {
-			return errors.New("Invalid Email")
-		}
+
 		return nil
 
 	default:
-		if u.Nickname == "" {
-			return errors.New("Required Nickname")
+		if err = CheckNickname(u.Nickname); err != nil {
+			return err
 		}
-		if u.Password == "" {
-			return errors.New("Required Password")
+		if err = CheckPassword(u.Password); err != nil {
+			return err
 		}
-		if u.Email == "" {
-			return errors.New("Required Email")
+		if err = CheckEmail(u.Email); err != nil {
+			return err
 		}
-		if err := checkmail.ValidateFormat(u.Email); err != nil {
-			return errors.New("Invalid Email")
-		}
+
 		return nil
 	}
 }
 
-func (u *User) SaveUser(db *gorm.DB) (*User, error) {
-
-	var err error
-	err = db.Debug().Create(&u).Error
+// Creates a new user entry.
+func (u *User) InsertUser(db *gorm.DB) (*User, error) {
+	err := db.Debug().Create(&u).Error
 	if err != nil {
 		return &User{}, err
 	}
+
 	return u, nil
 }
 
-func (u *User) FindAllUsers(db *gorm.DB) (*[]User, error) {
-	var err error
-	users := []User{}
-	err = db.Debug().Model(&User{}).Limit(100).Find(&users).Error
+// Fetch all users. Limit to first 100.
+func (u *User) FetchAllUsers(db *gorm.DB) (*[]User, error) {
+	var users []User
+	err := db.Debug().Model(&User{}).Limit(100).Find(&users).Error
 	if err != nil {
 		return &[]User{}, err
 	}
+
 	return &users, err
 }
 
-func (u *User) FindUserByID(db *gorm.DB, uid uint32) (*User, error) {
+// Fetch user by a specific ID.
+func (u *User) FetchUserByID(db *gorm.DB, uid uint32) (*User, error) {
 	var err error
 	err = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&u).Error
 	if err != nil {
@@ -121,39 +162,44 @@ func (u *User) FindUserByID(db *gorm.DB, uid uint32) (*User, error) {
 	if gorm.IsRecordNotFoundError(err) {
 		return &User{}, errors.New("user not found")
 	}
+
 	return u, err
 }
 
-func (u *User) UpdateUserById(db *gorm.DB, uid uint32) (*User, error) {
-	// Hash password
+// Update a user entry by a specific ID.
+func (u *User) UpdateUserByID(db *gorm.DB, uid uint32) (*User, error) {
+	// hash password
 	err := u.BeforeSave()
 	if err != nil {
 		log.Fatal(err)
 	}
+	// update user fields
 	db = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&User{}).UpdateColumn(
 		map[string]interface{}{
 			"password": u.Password,
 			"nickname": u.Nickname,
 			"email": u.Email,
-			"update_at": time.Now(),
+			"updated_at": time.Now(),
 		},
-		)
+	)
 	if db.Error != nil {
 		return &User{}, db.Error
 	}
-	// Display the updated user
+	// fetch newly updated user
 	err = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&u).Error
 	if err != nil {
 		return &User{}, err
 	}
+
 	return u, nil
 }
 
-func (u *User) DeleteUserById(db *gorm.DB, uid uint32) (int64, error) {
+// Delete a user entry by a specific ID.
+func (u *User) DeleteUserByID(db *gorm.DB, uid uint32) (int64, error) {
 	db = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&User{}).Delete(&User{})
-
 	if db.Error != nil {
 		return 0, db.Error
 	}
+
 	return db.RowsAffected, nil
 }

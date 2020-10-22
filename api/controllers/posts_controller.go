@@ -41,7 +41,7 @@ func (server *Server) CreatePost(w http.ResponseWriter, r *http.Request) {
 		responses.ERROR(w, http.StatusUnauthorized, errors.New(http.StatusText(http.StatusUnauthorized)))
 		return
 	}
-	postCreared, err := post.SavePost(server.DB)
+	postCreared, err := post.InsertPost(server.DB)
 	if err != nil {
 		formattedError := formaterror.FormatError(err.Error())
 		responses.ERROR(w, http.StatusInternalServerError, formattedError)
@@ -53,7 +53,7 @@ func (server *Server) CreatePost(w http.ResponseWriter, r *http.Request) {
 
 func (server *Server) GetPosts(w http.ResponseWriter, r *http.Request) {
 	post := models.Post{}
-	posts, err := post.FindAllPosts(server.DB)
+	posts, err := post.FetchAllPosts(server.DB)
 	if err != nil {
 		responses.ERROR(w, http.StatusInternalServerError, err)
 		return
@@ -69,7 +69,7 @@ func (server *Server) GetPostByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	post := models.Post{}
-	postReceived, err := post.FindPostById(server.DB, pid)
+	postReceived, err := post.FetchPostById(server.DB, pid)
 	if err != nil {
 		responses.ERROR(w, http.StatusInternalServerError, err)
 		return

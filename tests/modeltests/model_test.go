@@ -2,13 +2,13 @@ package modeltests
 
 import (
 	"fmt"
-	"log"
-	"os"
-	"testing"
 	"github.com/jinzhu/gorm"
 	"github.com/joho/godotenv"
 	"github.com/shawntoubeau/golang_blog_api/api/controllers"
 	"github.com/shawntoubeau/golang_blog_api/api/models"
+	"log"
+	"os"
+	"testing"
 )
 
 var server = controllers.Server{}
@@ -82,7 +82,7 @@ func seedOneUser() (models.User, error) {
 	return user, nil
 }
 
-func seedUsers() error {
+func seedUsers() (int, error) {
 	users := []models.User{
 		models.User{
 			Nickname: "Shawn",
@@ -99,10 +99,10 @@ func seedUsers() error {
 	for i, _ := range users {
 		err := server.DB.Model(&models.User{}).Create(&users[i]).Error
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
-	return nil
+	return len(users), nil
 }
 
 func refreshUserAndPostTable() error {
@@ -145,7 +145,7 @@ func seedOneUserAndOnePost() (models.Post, error) {
 }
 
 func seedUsersAndPosts() ([]models.User, []models.Post, error) {
-	var err error
+	err := refreshUserAndPostTable()
 	if err != nil {
 		return []models.User{}, []models.Post{}, err
 	}
