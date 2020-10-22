@@ -86,7 +86,7 @@ func TestCreateUser(t *testing.T) {
 		// Records server responses
 		rr := httptest.NewRecorder()
 		// Request handler
-		handler := http.HandlerFunc(server.CreateUser)
+		handler := http.HandlerFunc(server.InsertUser)
 		// Serve request
 		handler.ServeHTTP(rr, req)
 
@@ -124,7 +124,7 @@ func TestGetUsers(t *testing.T) {
 	}
 	// Create request recorder and serve
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(server.GetUsers)
+	handler := http.HandlerFunc(server.FetchAllUsers)
 	handler.ServeHTTP(rr, req)
 	// Create user array and process response
 	var users []models.User
