@@ -15,6 +15,7 @@ var server = controllers.Server{}
 var userInstance = models.User{}
 var postInstance = models.Post{}
 
+// Opens a connection to the test database.
 func Database() {
 	var err error
 
@@ -42,148 +43,119 @@ func Database() {
 	}
 }
 
+// Test entry point.
 func TestMain(m *testing.M) {
-	var err error
-	err = godotenv.Load(os.ExpandEnv("../../.env"))
+	// load environment vars
+	err := godotenv.Load(os.ExpandEnv("../../.env"))
 	if err != nil {
 		log.Fatalf("Error loading env variables: %v\n", err)
 	}
+	// create database connection
 	Database()
-
+	// run the tests
 	os.Exit(m.Run())
 }
 
-func refreshUserTable() error {
-	err := server.DB.DropTableIfExists(&models.User{}).Error
-	if err != nil {
-		return err
-	}
-	err = server.DB.AutoMigrate(&models.User{}).Error
-	if err != nil {
-		return err
-	}
-	log.Printf("Successfully refresed table")
-	return nil
-}
-
-func seedOneUser() (models.User, error) {
-	_ = refreshUserTable()
-
-	user := models.User{
-		Nickname: "Shawn",
-		Email:    "shawn@aol.com",
-		Password: "123",
-	}
-
-	err := server.DB.Model(&models.User{}).Create(&user).Error
-	if err != nil {
-		log.Fatalf("Cannot seed user table: %v", err)
-	}
-	return user, nil
-}
-
-func seedUsers() (int, error) {
-	users := []models.User{
-		models.User{
-			Nickname: "Shawn",
-			Email:    "shawn@aol.com",
-			Password: "123",
-		},
-		models.User{
-			Nickname: "Aria",
-			Email:    "aria@aol.com",
-			Password: "321",
-		},
-	}
-
-	for i, _ := range users {
-		err := server.DB.Model(&models.User{}).Create(&users[i]).Error
-		if err != nil {
-			return 0, err
-		}
-	}
-	return len(users), nil
-}
-
-func refreshUserAndPostTable() error {
+// Drops old user and post tables and migrates user and post schemas.
+func refreshTables() error {
 	err := server.DB.DropTableIfExists(&models.User{}, &models.Post{}).Error
 	if err != nil {
 		return err
 	}
+
 	err = server.DB.AutoMigrate(&models.User{}, &models.Post{}).Error
 	if err != nil {
 		return err
 	}
+
 	log.Printf("Successfully refreshed user and post tables")
 	return nil
 }
 
-func seedOneUserAndOnePost() (models.Post, error) {
-	err := refreshUserAndPostTable()
+// Insert 1 mock user into the database.
+func seedOneUser() (models.User, error) {
+	user := MockUser1
+	err := server.DB.Model(&models.User{}).Create(&user).Error
 	if err != nil {
-		return models.Post{}, err
+		log.Fatalf("Cannot seed user table: %v", err)
 	}
-	user := models.User{
-		Nickname: "Aria",
-		Email:    "aria@aol.com",
-		Password: "321",
-	}
-	err = server.DB.Model(&models.User{}).Create(&user).Error
-	if err != nil {
-		return models.Post{}, err
-	}
-	post := models.Post{
-		Title:    "I like dogs",
-		Content:  "Dogs are gr8",
-		AuthorID: user.ID,
-	}
-	err = server.DB.Model(&post).Create(&post).Error
-	if err != nil {
-		return models.Post{}, err
-	}
-	return post, nil
+
+	return user, nil
 }
 
-func seedUsersAndPosts() ([]models.User, []models.Post, error) {
-	err := refreshUserAndPostTable()
-	if err != nil {
-		return []models.User{}, []models.Post{}, err
-	}
+// Insert multiple mock users into the database.
+func seedUsers() ([]models.User, error) {
+	user1 := MockUser1
+	user2 := MockUser2
 	var users = []models.User{
-		models.User{
-			Nickname: "Shawn",
-			Email:    "shawn@aol.com",
-			Password: "123",
-		},
-		models.User{
-			Nickname: "Aria",
-			Email:    "aria@aol.com",
-			Password: "321",
-		},
+		user1,
+		user2,
 	}
 
-	var posts = []models.Post{
-		models.Post{
-			Title:    "I like cats",
-			Content:  "Cats are gr8",
-		},
-		models.Post{
-			Title:    "I like dogs",
-			Content:  "Dogs are gr8",
-		},
-	}
-
+	// insert users
 	for i, _ := range users {
-		err = server.DB.Model(&models.User{}).Create(&users[i]).Error
+		fmt.Printf("User: %v\n", users[i])
+		err := server.DB.Model(&models.User{}).Create(&users[i]).Error
+		if err != nil {
+			return []models.User{}, err
+		}
+	}
+
+	return users, nil
+}
+
+// Insert 1 mock user and 1 mock post.
+func seedOneUserAndOnePost() (models.User, models.Post, error) {
+	user := MockUser1
+
+	fmt.Printf("User: %v\n", user)
+
+	err := server.DB.Model(&models.User{}).Create(&user).Error
+	fmt.Printf("User: %v\n", user)
+	if err != nil {
+		return models.User{}, models.Post{}, err
+	}
+	post := MockPost1(user.ID)
+	err = server.DB.Model(&post).Create(&post).Error
+	if err != nil {
+		return models.User{}, models.Post{}, err
+	}
+
+	return user, post, nil
+}
+
+// Insert multiple users and multiple posts.
+func seedUsersAndPosts() ([]models.User, []models.Post, error) {
+	user1 := MockUser1
+	user2 := MockUser2
+
+	fmt.Printf("User 1: %v\n", user1)
+
+	var users = []models.User{
+		user1,
+		user2,
+	}
+
+	// insert users
+	for i, _ := range users {
+		err := server.DB.Model(&models.User{}).Create(&users[i]).Error
 		if err != nil {
 			log.Fatalf("Cannot seed users table: %v", err)
 		}
-		posts[i].AuthorID = users[i].ID
+	}
 
-		err = server.DB.Model(&models.Post{}).Create(&posts[i]).Error
+	var posts = []models.Post{
+		MockPost1(users[0].ID),
+		MockPost2(users[1].ID),
+	}
+
+	// insert posts
+	for i, _ := range posts {
+		err := server.DB.Model(&models.Post{}).Create(&posts[i]).Error
 		if err != nil {
 			log.Fatalf("Cannot seed posts table: %v", err)
 		}
 	}
+
 	return users, posts, nil
 }
