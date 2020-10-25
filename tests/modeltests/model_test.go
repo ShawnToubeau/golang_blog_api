@@ -77,7 +77,7 @@ func seedOneUser() (models.User, error) {
 	user := MockUser1
 	err := server.DB.Model(&models.User{}).Create(&user).Error
 	if err != nil {
-		log.Fatalf("Cannot seed user table: %v", err)
+		return models.User{}, err
 	}
 
 	return user, nil
@@ -94,7 +94,6 @@ func seedUsers() ([]models.User, error) {
 
 	// insert users
 	for i, _ := range users {
-		fmt.Printf("User: %v\n", users[i])
 		err := server.DB.Model(&models.User{}).Create(&users[i]).Error
 		if err != nil {
 			return []models.User{}, err
@@ -108,13 +107,11 @@ func seedUsers() ([]models.User, error) {
 func seedOneUserAndOnePost() (models.User, models.Post, error) {
 	user := MockUser1
 
-	fmt.Printf("User: %v\n", user)
-
 	err := server.DB.Model(&models.User{}).Create(&user).Error
-	fmt.Printf("User: %v\n", user)
 	if err != nil {
 		return models.User{}, models.Post{}, err
 	}
+
 	post := MockPost1(user.ID)
 	err = server.DB.Model(&post).Create(&post).Error
 	if err != nil {
@@ -129,8 +126,6 @@ func seedUsersAndPosts() ([]models.User, []models.Post, error) {
 	user1 := MockUser1
 	user2 := MockUser2
 
-	fmt.Printf("User 1: %v\n", user1)
-
 	var users = []models.User{
 		user1,
 		user2,
@@ -140,7 +135,7 @@ func seedUsersAndPosts() ([]models.User, []models.Post, error) {
 	for i, _ := range users {
 		err := server.DB.Model(&models.User{}).Create(&users[i]).Error
 		if err != nil {
-			log.Fatalf("Cannot seed users table: %v", err)
+			return []models.User{}, []models.Post{}, err
 		}
 	}
 
@@ -153,7 +148,7 @@ func seedUsersAndPosts() ([]models.User, []models.Post, error) {
 	for i, _ := range posts {
 		err := server.DB.Model(&models.Post{}).Create(&posts[i]).Error
 		if err != nil {
-			log.Fatalf("Cannot seed posts table: %v", err)
+			return []models.User{}, []models.Post{}, err
 		}
 	}
 

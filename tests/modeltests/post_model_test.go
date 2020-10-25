@@ -9,6 +9,11 @@ import (
 
 // Fetch all posts.
 func TestFetchAllPosts(t *testing.T) {
+	err := refreshTables()
+	if err != nil {
+		log.Fatalf("Failed to refresh tables: %v\n", err)
+	}
+
 	_, posts, err := seedUsersAndPosts()
 	if err != nil {
 		log.Fatalf("Failed to seed post and user: %v\n", err)

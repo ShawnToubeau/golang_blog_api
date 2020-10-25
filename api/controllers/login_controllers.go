@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/shawntoubeau/golang_blog_api/api/auth"
 	"github.com/shawntoubeau/golang_blog_api/api/models"
 	"github.com/shawntoubeau/golang_blog_api/api/responses"
@@ -49,8 +48,6 @@ func (server *Server) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user.Prepare()
-	// todo: not sure what Prepare does here
-	fmt.Printf("Login: user after prepare: %v\n", user)
 	// validate the user for login
 	err = user.Validate("login")
 	if err != nil {

@@ -13,10 +13,10 @@ import (
 
 // User object
 type User struct {
-	ID uint32 `gorm:"primary_key;auto_increment" json:"id"`
-	Nickname string `gorm:"size:255;not null;unique" json:"nickname"`
-	Email string `gorm:"size:100;not null;unique" json:"email"`
-	Password string `gorm:"size:100;not null;" json:"password"`
+	ID        uint32    `gorm:"primary_key;auto_increment" json:"id"`
+	Nickname  string    `gorm:"size:255;not null;unique" json:"nickname"`
+	Email     string    `gorm:"size:100;not null;unique" json:"email"`
+	Password  string    `gorm:"size:100;not null;" json:"password"`
 	CreatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
@@ -76,7 +76,7 @@ func CheckEmail(email string) error {
 	}
 
 	if err := checkmail.ValidateFormat(email); err != nil {
-		return errors.New("invalid email format")
+		return errors.New("invalid email")
 	}
 
 	return nil
@@ -176,9 +176,9 @@ func (u *User) UpdateUserByID(db *gorm.DB, uid uint32) (*User, error) {
 	// update user fields
 	db = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&User{}).UpdateColumn(
 		map[string]interface{}{
-			"password": u.Password,
-			"nickname": u.Nickname,
-			"email": u.Email,
+			"password":   u.Password,
+			"nickname":   u.Nickname,
+			"email":      u.Email,
 			"updated_at": time.Now(),
 		},
 	)
