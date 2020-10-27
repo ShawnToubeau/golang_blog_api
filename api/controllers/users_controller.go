@@ -107,7 +107,7 @@ func (server *Server) UpdateUserById(w http.ResponseWriter, r *http.Request) {
 	// extract auth token
 	tokenId, err := auth.ExtractTokenID(r)
 	if err != nil {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New("unauthorized"))
+		responses.ERROR(w, http.StatusUnauthorized, errors.New(http.StatusText(http.StatusUnauthorized)))
 		return
 	}
 	// check if auth token matches the user token in the request

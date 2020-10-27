@@ -28,18 +28,9 @@ func CreateToken(userId uint32) (string, error) {
 
 // Extract an auth token from a request header.
 func ExtractToken(r *http.Request) string {
-	// request query parameters
-	keys := r.URL.Query()
-	// todo: not sure what this is
-	token := keys.Get("token")
-	fmt.Printf("ExtractToken - token: %v\n", token)
-	if token != "" {
-		return token
-	}
 	// extract bearer token
 	bearerToken := r.Header.Get("Authorization")
-	fmt.Printf("ExtractToken - bearerToken: %v\n", token)
-	if len(strings.Split(bearerToken, "")) == 2 {
+	if len(strings.Split(bearerToken, " ")) == 2 {
 		return strings.Split(bearerToken, " ")[1]
 	}
 
@@ -93,10 +84,8 @@ func ExtractTokenID(r *http.Request) (uint32, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		// todo: not sure what this does
-		stuff := []byte(os.Getenv("API_SECRET"))
-		fmt.Printf("ExtractTokenID - stuff: %v\n", stuff)
-		return stuff, nil
+		parsedToken := []byte(os.Getenv("API_SECRET"))
+		return parsedToken, nil
 	})
 	// throw parsing error
 	if err != nil {

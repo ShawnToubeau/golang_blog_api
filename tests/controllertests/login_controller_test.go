@@ -65,19 +65,21 @@ func TestLogin(t *testing.T) {
 		log.Fatalf("Failed to refresh tables: %v\n", err)
 	}
 
+	// mock user
 	user, err := seedOneUser()
 	if err != nil {
 		fmt.Printf("Failed to seed user table: %v\n", err)
 	}
 
-	correctInputJSON := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, user.Email, user.Password)
+	// mock request JSON payloads
+	correctCredentials := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, user.Email, user.Password)
 	wrongPassword := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, user.Email, "wrong password")
 	wrongCredentials := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, "wrong@email.com", "wrong password")
 	invalidEmail := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, "invalid email", user.Password)
 	missingEmail := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, "", user.Password)
 	missingPassword := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, user.Email, "")
 
-	// same requests
+	// sample request payloads and responses
 	samples := []struct {
 		inputJSON    string
 		statusCode   int
@@ -86,7 +88,7 @@ func TestLogin(t *testing.T) {
 		errorMessage string
 	}{
 		{
-			inputJSON:    correctInputJSON,
+			inputJSON:    correctCredentials,
 			statusCode:   200,
 			errorMessage: "",
 		},
