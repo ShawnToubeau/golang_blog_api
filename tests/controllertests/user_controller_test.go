@@ -30,14 +30,14 @@ func TestCreateUser(t *testing.T) {
 	nicknameAlreadyTaken := fmt.Sprintf(`{"nickname": "%v", "email": "%v" , "password": "%v"}`, user1.Nickname, user2.Email, user2.Password)
 	emailRequiredTaken := fmt.Sprintf(`{"nickname": "%v", "email": "" , "password": "%v"}`, user2.Nickname, user2.Password)
 	nicknameRequiredTaken := fmt.Sprintf(`{"nickname": "", "email": "%v" , "password": "%v"}`, user2.Email, user2.Password)
-	passwordMissing := fmt.Sprintf(`{"nickname": "%v", "email": "%v" , "password": ""}`,user2.Nickname, user2.Email)
+	passwordMissing := fmt.Sprintf(`{"nickname": "%v", "email": "%v" , "password": ""}`, user2.Nickname, user2.Email)
 
 	// sample request payloads and responses
-	samples := []struct{
-		inputJSON string
-		statusCode int
-		nickname string
-		email string
+	samples := []struct {
+		inputJSON    string
+		statusCode   int
+		nickname     string
+		email        string
 		errorMessage string
 	}{
 		{
@@ -157,15 +157,14 @@ func TestGetUserById(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("User %v\n", user)
 
 	// sample request payloads and responses
 	userSample := []struct {
-		id string
+		id         string
 		statusCode int
-		nickname string
-		email string
-		password string
+		nickname   string
+		email      string
+		password   string
 	}{
 		{
 
@@ -226,8 +225,7 @@ func TestUpdateUser(t *testing.T) {
 		log.Fatalf("Failed to seed user table: %v\n", err)
 	}
 	user := users[0]
-
-	fmt.Printf("User: %v\n", user)
+	userPassword := MockUser1.Password
 
 	// retrieve first user
 	AuthID = user.ID
@@ -238,29 +236,29 @@ func TestUpdateUser(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Failed to login user: %v\n", err)
 	}
-	// Format token
+	// format token
 	tokenString := fmt.Sprintf("Bearer %v", token)
 
 	// mock request JSON payloads
-	correctCredentials := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": "%v"}`, user.Nickname, user.Email, MockUser1.Password)
+	correctCredentials := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": "%v"}`, user.Nickname, user.Email, userPassword)
 	missingPassword := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": ""}`, user.Nickname, user.Email)
-	emailTaken := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": "%v"}`, user.Nickname, users[1].Email, MockUser1.Password)
-	nicknameTaken := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": "%v"}`, users[1].Nickname, user.Email, MockUser1.Password)
-	invalidEmail := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": "%v"}`, user.Nickname, "invalid email", MockUser1.Password)
-	missingEmail := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": "%v"}`, user.Nickname, "", MockUser1.Password)
-	missingNickname := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": "%v"}`, "", user.Email, MockUser1.Password)
-
+	emailTaken := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": "%v"}`, user.Nickname, users[1].Email, userPassword)
+	nicknameTaken := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": "%v"}`, users[1].Nickname, user.Email, userPassword)
+	invalidEmail := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": "%v"}`, user.Nickname, "invalid email", userPassword)
+	missingEmail := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": "%v"}`, user.Nickname, "", userPassword)
+	missingNickname := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": "%v"}`, "", user.Email, userPassword)
 
 	// sample request payloads and responses
 	samples := []struct {
-		id string
-		updateJSON string
-		statusCode int
+		id             string
+		updateJSON     string
+		statusCode     int
 		updateNickname string
-		updateEmail string
-		tokenGiven string
-		errorMessage string
-	} {
+		updateEmail    string
+		tokenGiven     string
+		errorMessage   string
+	}{
+		// Valid
 		{
 			strconv.Itoa(int(AuthID)),
 			correctCredentials,
@@ -406,60 +404,66 @@ func TestUpdateUser(t *testing.T) {
 }
 
 func TestDeleteUser(t *testing.T) {
-	var AuthEmail, AuthPassword string
+	var AuthEmail string
 	var AuthId uint32
-
-	// Refresh user table
+	// refresh user table
 	err := refreshTables()
 	if err != nil {
 		log.Fatalf("Failed to refresh user table: %v\n", err)
 	}
-	// Seed users
+	// seed users
 	users, err := seedUsers()
 	if err != nil {
-		log.Fatalf("Failed to see users: %v\n", err)
+		log.Fatalf("Failed to seed user table: %v\n", err)
 	}
-	// Get first users credentials
-		AuthId = users[0].ID
-		AuthEmail = users[0].Email
-		AuthPassword = users[0].Password
-	// Login in the user to get their auth token
-	token, err := server.AuthenticateCredentials(AuthEmail, AuthPassword)
+	// get first users credentials
+	AuthId = users[0].ID
+	AuthEmail = users[0].Email
+	//AuthPassword = users[0].Password
+	// login in the user to get their auth token
+	token, err := server.AuthenticateCredentials(AuthEmail, MockUser1.Password)
 	if err != nil {
 		log.Fatalf("Failed to login user: %v\n", err)
 	}
+	// construct token string
 	tokenString := fmt.Sprintf("Bearer %v", token)
 
-	userSample := []struct{
-		id string
-		tokenGiven string
-		stateCode int
+	// sample request payloads and responses
+	userSample := []struct {
+		id           string
+		tokenGiven   string
+		stateCode    int
 		errorMessage string
-	} {
+	}{
+		// Valid
 		{
 			strconv.Itoa(int(AuthId)),
 			tokenString,
 			204,
 			"",
 		},
+		// Missing token string
 		{
 			strconv.Itoa(int(AuthId)),
 			"",
 			401,
 			"Unauthorized",
 		},
+		// Incorrect token string
 		{
 			strconv.Itoa(int(AuthId)),
 			"Incorrect token",
 			401,
 			"Unauthorized",
 		},
+		// Missing user ID
 		{
 			"",
 			tokenString,
 			400,
 			"",
 		},
+		// Wrong user ID
 		{
 			strconv.Itoa(int(2)),
 			tokenString,
@@ -468,20 +472,24 @@ func TestDeleteUser(t *testing.T) {
 		},
 	}
 
+	// test each sample request payload
 	for _, v := range userSample {
-		req, err := http.NewRequest("GET", "/users", nil)
+		// build the request
+		req, err := http.NewRequest("DELETE", "/users", nil)
 		if err != nil {
 			t.Errorf("Failed to create request: %v\n", err)
 		}
+		// set request variables and create response recorder
 		req = mux.SetURLVars(req, map[string]string{"id": v.id})
 		rr := httptest.NewRecorder()
 		handler := http.HandlerFunc(server.DeleteUserById)
-
+		// set token header
 		req.Header.Set("Authorization", v.tokenGiven)
-
+		// serve the request
 		handler.ServeHTTP(rr, req)
-		assert.Equal(t, rr.Code, v.stateCode)
 
+		assert.Equal(t, rr.Code, v.stateCode)
+		// failed request tests
 		if v.stateCode == 401 && v.errorMessage != "" {
 			responseMap := make(map[string]interface{})
 			err = json.Unmarshal([]byte(rr.Body.String()), &responseMap)

@@ -32,7 +32,7 @@ func TestSignIn(t *testing.T) {
 	}{
 		{
 			email:        user.Email,
-			password:     user.Password,
+			password:     MockUser1.Password,
 			errorMessage: "",
 		},
 		{
@@ -70,13 +70,14 @@ func TestLogin(t *testing.T) {
 	if err != nil {
 		fmt.Printf("Failed to seed user table: %v\n", err)
 	}
+	userPassword := MockUser1.Password
 
 	// mock request JSON payloads
-	correctCredentials := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, user.Email, user.Password)
+	correctCredentials := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, user.Email, userPassword)
 	wrongPassword := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, user.Email, "wrong password")
 	wrongCredentials := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, "wrong@email.com", "wrong password")
-	invalidEmail := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, "invalid email", user.Password)
-	missingEmail := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, "", user.Password)
+	invalidEmail := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, "invalid email", userPassword)
+	missingEmail := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, "", userPassword)
 	missingPassword := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, user.Email, "")
 
 	// sample request payloads and responses

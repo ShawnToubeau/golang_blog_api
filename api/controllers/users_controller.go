@@ -147,7 +147,7 @@ func (server *Server) DeleteUserById(w http.ResponseWriter, r *http.Request) {
 	// extract auth token ID
 	tokenID, err := auth.ExtractTokenID(r)
 	if err != nil {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New("unauthorized"))
+		responses.ERROR(w, http.StatusUnauthorized, errors.New(http.StatusText(http.StatusUnauthorized)))
 		return
 	}
 	// verify the auth token ID matches the user ID
