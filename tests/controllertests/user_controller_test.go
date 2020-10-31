@@ -17,14 +17,14 @@ import (
 func TestCreateUser(t *testing.T) {
 	err := refreshTables()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to refresh tables: %v\n", err)
 	}
 
 	// mock users
 	user1 := MockUser1
 	user2 := MockUser2
 
-	// mock request JSON payloads
+	// mock request payloads
 	user1InputJSON := fmt.Sprintf(`{"nickname": "%v", "email": "%v" , "password": "%v"}`, user1.Nickname, user1.Email, user1.Password)
 	emailAlreadyTaken := fmt.Sprintf(`{"nickname": "%v", "email": "%v" , "password": "%v"}`, user2.Nickname, user1.Email, user2.Password)
 	nicknameAlreadyTaken := fmt.Sprintf(`{"nickname": "%v", "email": "%v" , "password": "%v"}`, user1.Nickname, user2.Email, user2.Password)
@@ -87,7 +87,7 @@ func TestCreateUser(t *testing.T) {
 	// test sample requests
 	for _, sample := range samples {
 		// build the request
-		req, err := http.NewRequest("POST", "/user", bytes.NewBufferString(sample.inputJSON))
+		req, err := http.NewRequest("PUT", "/user", bytes.NewBufferString(sample.inputJSON))
 		if err != nil {
 			t.Errorf("Error creating request: %v\n", err)
 		}
@@ -115,7 +115,7 @@ func TestCreateUser(t *testing.T) {
 	}
 }
 
-func TestGetUsers(t *testing.T) {
+func TestFetchUsers(t *testing.T) {
 	// refresh table
 	err := refreshTables()
 	if err != nil {
@@ -146,7 +146,7 @@ func TestGetUsers(t *testing.T) {
 	assert.Equal(t, len(users), len(mockUsers))
 }
 
-func TestGetUserById(t *testing.T) {
+func TestFetchUserById(t *testing.T) {
 	// refresh table
 	err := refreshTables()
 	if err != nil {
@@ -193,7 +193,7 @@ func TestGetUserById(t *testing.T) {
 		// set request params, create response recorder, and serve the request
 		req = mux.SetURLVars(req, map[string]string{"id": sample.id})
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(server.GetUserByID)
+		handler := http.HandlerFunc(server.FetchUserByID)
 		handler.ServeHTTP(rr, req)
 		// store the response
 		responseMap := make(map[string]interface{})
@@ -205,8 +205,8 @@ func TestGetUserById(t *testing.T) {
 		assert.Equal(t, rr.Code, sample.statusCode)
 		// valid request tests
 		if sample.statusCode == 200 {
-			assert.Equal(t, user.Nickname, responseMap["nickname"])
-			assert.Equal(t, user.Email, responseMap["email"])
+			assert.Equal(t, sample.nickname, responseMap["nickname"])
+			assert.Equal(t, sample.email, responseMap["email"])
 		}
 	}
 }
@@ -240,7 +240,7 @@ func TestUpdateUser(t *testing.T) {
 	tokenString := fmt.Sprintf("Bearer %v", token)
 
 	// mock request JSON payloads
-	correctCredentials := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": "%v"}`, user.Nickname, user.Email, userPassword)
+	validPayload := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": "%v"}`, user.Nickname, user.Email, userPassword)
 	missingPassword := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": ""}`, user.Nickname, user.Email)
 	emailTaken := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": "%v"}`, user.Nickname, users[1].Email, userPassword)
 	nicknameTaken := fmt.Sprintf(`{"nickname": "%v", "email": "%v", "password": "%v"}`, users[1].Nickname, user.Email, userPassword)
@@ -261,7 +261,7 @@ func TestUpdateUser(t *testing.T) {
 		// Valid
 		{
 			strconv.Itoa(int(AuthID)),
-			correctCredentials,
+			validPayload,
 			200,
 			user.Nickname,
 			user.Email,
@@ -281,7 +281,7 @@ func TestUpdateUser(t *testing.T) {
 		// No auth token
 		{
 			strconv.Itoa(int(AuthID)),
-			correctCredentials,
+			validPayload,
 			401,
 			user.Nickname,
 			user.Email,
@@ -291,7 +291,7 @@ func TestUpdateUser(t *testing.T) {
 		// Wrong auth token
 		{
 			strconv.Itoa(int(AuthID)),
-			correctCredentials,
+			validPayload,
 			401,
 			user.Nickname,
 			user.Email,
@@ -351,7 +351,7 @@ func TestUpdateUser(t *testing.T) {
 		// No ID
 		{
 			"",
-			correctCredentials,
+			validPayload,
 			400,
 			user.Nickname,
 			user.Email,
@@ -361,7 +361,7 @@ func TestUpdateUser(t *testing.T) {
 		// Using other user's token
 		{
 			strconv.Itoa(2),
-			correctCredentials,
+			validPayload,
 			401,
 			user.Nickname,
 			user.Email,
@@ -377,11 +377,13 @@ func TestUpdateUser(t *testing.T) {
 		if err != nil {
 			t.Errorf("Failed to create request: %v\n", err)
 		}
-		// set request params, create response recorder, and serve the request
+		// set request params
 		req = mux.SetURLVars(req, map[string]string{"id": sample.id})
+		req.Header.Set("Authorization", sample.tokenGiven)
+		// create response recorder
 		rr := httptest.NewRecorder()
 		handler := http.HandlerFunc(server.UpdateUserById)
-		req.Header.Set("Authorization", sample.tokenGiven)
+		// serve the request
 		handler.ServeHTTP(rr, req)
 		// store the response
 		responseMap := make(map[string]interface{})

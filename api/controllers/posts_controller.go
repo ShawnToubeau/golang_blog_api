@@ -39,7 +39,7 @@ func (server *Server) InsertPost(w http.ResponseWriter, r *http.Request) {
 	// extract the user ID
 	uid, err := auth.ExtractTokenID(r)
 	if err != nil {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New("unauthorized"))
+		responses.ERROR(w, http.StatusUnauthorized, errors.New(http.StatusText(http.StatusUnauthorized)))
 		return
 	}
 	// check if the user ID in the token matches the user ID in the post object
@@ -72,7 +72,7 @@ func (server *Server) FetchAllPosts(w http.ResponseWriter, _ *http.Request) {
 }
 
 // Route handler for fetching a post by a specific ID.
-func (server *Server) GetPostByID(w http.ResponseWriter, r *http.Request) {
+func (server *Server) FetchPostByID(w http.ResponseWriter, r *http.Request) {
 	// read in request variables
 	vars := mux.Vars(r)
 	// scan post ID

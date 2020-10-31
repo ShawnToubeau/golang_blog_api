@@ -118,7 +118,7 @@ func seedOneUserAndOnePost() (models.User, models.Post, error) {
 	}
 
 	log.Printf("Successfully seeded user and post tables")
-	return MockUser1, MockPost1(user.ID), nil
+	return user, post, nil
 }
 
 // Insert multiple mock users and mock posts.
@@ -152,13 +152,5 @@ func seedUsersAndPosts() ([]models.User, []models.Post, error) {
 	}
 
 	log.Printf("Successfully seeded user and post tables")
-	return []models.User{
-			user1,
-			user2,
-		},
-		[]models.Post{
-			MockPost1(users[0].ID),
-			MockPost2(users[1].ID),
-		},
-		nil
+	return users, posts, nil
 }

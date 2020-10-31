@@ -61,7 +61,7 @@ func (server *Server) FetchAllUsers(w http.ResponseWriter, _ *http.Request) {
 }
 
 // Route handler for fetching a specific user by ID.
-func (server *Server) GetUserByID(w http.ResponseWriter, r *http.Request) {
+func (server *Server) FetchUserByID(w http.ResponseWriter, r *http.Request) {
 	// read in request variables
 	vars := mux.Vars(r)
 	// parse the user ID

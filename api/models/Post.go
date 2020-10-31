@@ -2,19 +2,19 @@ package models
 
 import (
 	"errors"
+	"github.com/jinzhu/gorm"
 	"html"
 	"strings"
 	"time"
-	"github.com/jinzhu/gorm"
 )
 
 // Post object
 type Post struct {
-	ID uint64 `gorm:"primary_key;auto_increment" json:"id"`
-	Title string `gorm:"size:255;not null;unique" json:"title"`
-	Content string `gorm:"size:255;not null;" json:"content"`
-	Author User `json:"author"`
-	AuthorID uint32 `gorm:"not null" json:"author_id"`
+	ID        uint64    `gorm:"primary_key;auto_increment" json:"id"`
+	Title     string    `gorm:"size:255;not null;unique" json:"title"`
+	Content   string    `gorm:"size:255;not null;" json:"content"`
+	Author    User      `json:"author"`
+	AuthorID  uint32    `gorm:"not null" json:"author_id"`
 	CreatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
@@ -39,7 +39,7 @@ func (p *Post) Validate() error {
 		return errors.New("content required")
 	}
 	if p.AuthorID < 1 {
-		return errors.New("author required")
+		return errors.New("author ID required")
 	}
 	return nil
 }
@@ -101,8 +101,8 @@ func (p *Post) UpdatePostById(db *gorm.DB) (*Post, error) {
 	// update the post's title and content
 	err := db.Debug().Model(&Post{}).Where("id = ?", p.ID).Updates(
 		Post{
-			Title: p.Title,
-			Content: p.Content,
+			Title:     p.Title,
+			Content:   p.Content,
 			UpdatedAt: time.Now(),
 		}).Error
 	if err != nil {
