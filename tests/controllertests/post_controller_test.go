@@ -270,6 +270,9 @@ func TestUpdatePostById(t *testing.T) {
 
 	// mock request JSON payloads
 	validPayload := fmt.Sprintf(`{"title": "%v", "content": "%v", "author_id": %v}`, "new title", "new content", AuthID)
+	missingTitle := fmt.Sprintf(`{"title": "", "content": "%v", "author_id": %v}`, "new content", AuthID)
+	titleTaken := fmt.Sprintf(`{"title": "%v", "content": "%v", "author_id": %v}`, posts[1].Title, "new content", AuthID)
+	missingContent := fmt.Sprintf(`{"title": "%v", "content": "", "author_id": %v}`, "new title", AuthID)
 
 	// sample request payloads and responses
 	samples := []struct {
@@ -281,6 +284,7 @@ func TestUpdatePostById(t *testing.T) {
 		tokenGiven    string
 		errorMessage  string
 	}{
+		// valid case
 		{
 			strconv.Itoa(int(AuthID)),
 			validPayload,
@@ -289,6 +293,76 @@ func TestUpdatePostById(t *testing.T) {
 			"new content",
 			tokenString,
 			"",
+		},
+		// missing title
+		{
+			strconv.Itoa(int(AuthID)),
+			missingTitle,
+			422,
+			"",
+			"new content",
+			tokenString,
+			"title required",
+		},
+		// title taken
+		{
+			strconv.Itoa(int(AuthID)),
+			titleTaken,
+			500,
+			posts[1].Title,
+			"new content",
+			tokenString,
+			"title already taken",
+		},
+		// missing content
+		{
+			strconv.Itoa(int(AuthID)),
+			missingContent,
+			422,
+			"new title",
+			"",
+			tokenString,
+			"content required",
+		},
+		// missing token
+		{
+			strconv.Itoa(int(AuthID)),
+			validPayload,
+			401,
+			"new title",
+			"new content",
+			"",
+			"token contains an invalid number of segments",
+		},
+		// missing token
+		{
+			strconv.Itoa(int(AuthID)),
+			validPayload,
+			401,
+			"new title",
+			"new content",
+			"incorrect token",
+			"token contains an invalid number of segments",
+		},
+		// missing author ID
+		{
+			"",
+			validPayload,
+			400,
+			"new title",
+			"new content",
+			tokenString,
+			"strconv.ParseUint: parsing \"\": invalid syntax",
+		},
+		// incorrect author ID
+		{
+			strconv.Itoa(2),
+			validPayload,
+			401,
+			"new title",
+			"new content",
+			tokenString,
+			"unauthorized",
 		},
 	}
 
@@ -321,6 +395,104 @@ func TestUpdatePostById(t *testing.T) {
 		}
 		// invalid request tests
 		if sample.statusCode != 200 {
+			assert.Equal(t, responseMap["error"], sample.errorMessage)
+		}
+	}
+}
+
+func TestDeletePost(t *testing.T) {
+	var AuthEmail, AuthPassword string
+	var AuthID uint32
+	// refresh tables
+	err := refreshTables()
+	if err != nil {
+		log.Fatalf("Failed to refresh tables: %v\n", err)
+	}
+	// seed tables
+	users, _, err := seedUsersAndPosts()
+	if err != nil {
+		log.Fatalf("Failed to seed tables: %v\n", err)
+	}
+	// get first users credentials
+	AuthID = users[0].ID
+	AuthEmail = users[0].Email
+	AuthPassword = MockUser1.Password
+	// login the user to get their auth token
+	token, err := server.AuthenticateCredentials(AuthEmail, AuthPassword)
+	if err != nil {
+		log.Fatalf("Failed to login user: %v\n", err)
+	}
+	// construct token string
+	tokenString := fmt.Sprintf("Bearer: %v", token)
+
+	// sample request payloads and responses
+	userSamples := []struct {
+		id           string
+		tokenGiven   string
+		statusCode   int
+		errorMessage string
+	}{
+		// Valid
+		{
+			strconv.Itoa(int(AuthID)),
+			tokenString,
+			204,
+			"",
+		},
+		// Missing token string
+		{
+			strconv.Itoa(int(AuthID)),
+			"",
+			401,
+			"token contains an invalid number of segments",
+		},
+		// Incorrect token string
+		{
+			strconv.Itoa(int(AuthID)),
+			"incorrect token string",
+			401,
+			"token contains an invalid number of segments",
+		},
+		// Missing post ID
+		{
+			"",
+			tokenString,
+			400,
+			"strconv.ParseUint: parsing \"\": invalid syntax",
+		},
+		// Wrong post ID
+		{
+			strconv.Itoa(2),
+			tokenString,
+			401,
+			"unauthorized",
+		},
+	}
+
+	// test each sample request
+	for _, sample := range userSamples {
+		// build the request
+		req, err := http.NewRequest("DELETE", "/posts", nil)
+		if err != nil {
+			t.Errorf("Failed to create request: %v\n", err)
+		}
+		// set request variables and create response recorder
+		req = mux.SetURLVars(req, map[string]string{"id": sample.id})
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(server.DeletePostById)
+		// set token header
+		req.Header.Set("Authorization", sample.tokenGiven)
+		// serve the request
+		handler.ServeHTTP(rr, req)
+
+		assert.Equal(t, rr.Code, sample.statusCode)
+		if sample.statusCode != 204 && sample.errorMessage != "" {
+			responseMap := make(map[string]interface{})
+			err = json.Unmarshal([]byte(rr.Body.String()), &responseMap)
+			if err != nil {
+				t.Errorf("Cannot convert to json: %v\n", err)
+			}
+			fmt.Printf("res map: %v\n", responseMap)
 			assert.Equal(t, responseMap["error"], sample.errorMessage)
 		}
 	}

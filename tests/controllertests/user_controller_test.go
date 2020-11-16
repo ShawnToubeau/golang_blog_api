@@ -406,7 +406,7 @@ func TestUpdateUser(t *testing.T) {
 }
 
 func TestDeleteUser(t *testing.T) {
-	var AuthEmail string
+	var AuthEmail, AuthPassword string
 	var AuthId uint32
 	// refresh user table
 	err := refreshTables()
@@ -421,9 +421,9 @@ func TestDeleteUser(t *testing.T) {
 	// get first users credentials
 	AuthId = users[0].ID
 	AuthEmail = users[0].Email
-	//AuthPassword = users[0].Password
-	// login in the user to get their auth token
-	token, err := server.AuthenticateCredentials(AuthEmail, MockUser1.Password)
+	AuthPassword = MockUser1.Password
+	// login the user to get their auth token
+	token, err := server.AuthenticateCredentials(AuthEmail, AuthPassword)
 	if err != nil {
 		log.Fatalf("Failed to login user: %v\n", err)
 	}
