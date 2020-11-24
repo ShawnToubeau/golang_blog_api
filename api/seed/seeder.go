@@ -1,7 +1,6 @@
 package seed
 
 import (
-	"fmt"
 	"github.com/shawntoubeau/golang_blog_api/api/models"
 	"gorm.io/gorm"
 	"log"
@@ -27,12 +26,12 @@ var MockUsers = []models.User{
 
 // mock MockPosts
 var MockPost1 = models.Post{
-	Title:    "I like dogs",
-	Content:  "Dogs are gr8 :)",
+	Title:   "I like dogs",
+	Content: "Dogs are gr8 :)",
 }
 var MockPost2 = models.Post{
-	Title:    "I like Cats",
-	Content:  "Cats are gr8 :)",
+	Title:   "I like Cats",
+	Content: "Cats are gr8 :)",
 }
 var MockPosts = []models.Post{
 	MockPost1,
@@ -49,6 +48,14 @@ func GetPostsAuthorsPassword(authorId uint32) string {
 	return ""
 }
 
+func GenerateNewUser(nickname string, email string, password string) models.User {
+	return models.User{
+		Nickname: nickname,
+		Email:    email,
+		Password: password,
+	}
+}
+
 func GenerateNewPost(title string, content string, userId uint32) models.Post {
 	return models.Post{
 		Title:    title,
@@ -56,8 +63,6 @@ func GenerateNewPost(title string, content string, userId uint32) models.Post {
 		AuthorID: userId,
 	}
 }
-
-// todo fix returned users to have created IDs and posts to have created IDs and linked users
 
 // Load in mock data.
 func Load(db *gorm.DB) ([]models.User, []models.Post) {
@@ -88,10 +93,7 @@ func Load(db *gorm.DB) ([]models.User, []models.Post) {
 
 	// insert MockPosts when we have MockUsers
 	if numUsers > 0 {
-		for i, post := range MockPosts {
-			fmt.Printf("Iter: %v\n", i)
-			fmt.Printf("Curr post: %v\n", post)
-
+		for _, post := range MockPosts {
 			// fetch random user ID
 			s1 := rand.NewSource(time.Now().UnixNano())
 			r1 := rand.New(s1)
