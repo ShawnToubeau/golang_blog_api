@@ -2,7 +2,9 @@ package modeltests
 
 import (
 	"fmt"
-	"github.com/jinzhu/gorm"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	//"github.com/jinzhu/gorm"
 	"github.com/joho/godotenv"
 	"github.com/shawntoubeau/golang_blog_api/api/controllers"
 	"github.com/shawntoubeau/golang_blog_api/api/models"
@@ -23,7 +25,7 @@ func Database() {
 
 	if TestDbDriver == "mysql" {
 		DBURL := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local", os.Getenv("TestDbUser"), os.Getenv("TestDbPassword"), os.Getenv("TestDbHost"), os.Getenv("TestDbPort"), os.Getenv("TestDbName"))
-		server.DB, err = gorm.Open(TestDbDriver, DBURL)
+		server.DB, err = gorm.Open(postgres.Open(DBURL), &gorm.Config{})
 		if err != nil {
 			fmt.Printf("Cannot connect to %s database\n", TestDbDriver)
 			log.Fatal("This is the error:", err)
@@ -33,7 +35,7 @@ func Database() {
 	}
 	if TestDbDriver == "postgres" {
 		DBURL := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable password=%s", os.Getenv("TestDbHost"), os.Getenv("TestDbPort"), os.Getenv("TestDbUser"), os.Getenv("TestDbName"), os.Getenv("TestDbPassword"))
-		server.DB, err = gorm.Open(TestDbDriver, DBURL)
+		server.DB, err = gorm.Open(postgres.Open(DBURL), &gorm.Config{})
 		if err != nil {
 			fmt.Printf("Cannot connect to %s database\n", TestDbDriver)
 			log.Fatal("This is the error:", err)
@@ -57,19 +59,19 @@ func TestMain(m *testing.M) {
 }
 
 // Drops old user and post tables and migrates user and post schemas.
-func refreshTables() error {
-	err := server.DB.DropTableIfExists(&models.User{}, &models.Post{}).Error
-	if err != nil {
+func refreshTables() string {
+	err := server.DB.Migrator().DropTable(&models.User{}, &models.Post{}).Error()
+	if err != "" {
 		return err
 	}
 
-	err = server.DB.AutoMigrate(&models.User{}, &models.Post{}).Error
-	if err != nil {
+	err = server.DB.AutoMigrate(&models.User{}, &models.Post{}).Error()
+	if err != "" {
 		return err
 	}
 
 	log.Printf("Successfully refreshed user and post tables")
-	return nil
+	return ""
 }
 
 // Insert 1 mock user into the database.

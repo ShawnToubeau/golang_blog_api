@@ -5,34 +5,29 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/shawntoubeau/golang_blog_api/api/seed"
 	"gopkg.in/go-playground/assert.v1"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-// Test the sign-in controller.
+// Sign-in controller test
 func TestSignIn(t *testing.T) {
-	err := refreshTables()
-	if err != nil {
-		log.Fatalf("Failed to refresh tables: %v\n", err)
-	}
+	// seed test data
+	users, _ := seed.Load(server.DB)
+	user := users[0]
+	user.Password = seed.MockUser1.Password
 
-	user, err := seedOneUser()
-	if err != nil {
-		fmt.Printf("Failed to seed user table: %v\n", err)
-	}
-
-	// sample user payloads
-	mockData := []struct {
+	// sample request payloads and responses
+	samples := []struct {
 		email        string
 		password     string
 		errorMessage string
 	}{
 		{
 			email:        user.Email,
-			password:     MockUser1.Password,
+			password:     user.Password,
 			errorMessage: "",
 		},
 		{
@@ -48,10 +43,10 @@ func TestSignIn(t *testing.T) {
 	}
 
 	// test the sample payloads
-	for _, v := range mockData {
-		token, err := server.AuthenticateCredentials(v.email, v.password)
+	for _, sample := range samples {
+		token, err := server.AuthenticateCredentials(sample.email, sample.password)
 		if err != nil {
-			assert.Equal(t, err, errors.New(v.errorMessage))
+			assert.Equal(t, err, errors.New(sample.errorMessage))
 		} else {
 			assert.NotEqual(t, token, "")
 		}
@@ -60,24 +55,17 @@ func TestSignIn(t *testing.T) {
 
 // Test the login controller.
 func TestLogin(t *testing.T) {
-	err := refreshTables()
-	if err != nil {
-		log.Fatalf("Failed to refresh tables: %v\n", err)
-	}
+	// seed test data
+	users, _ := seed.Load(server.DB)
+	user := users[0]
+	user.Password = seed.MockUser1.Password
 
-	// mock user
-	user, err := seedOneUser()
-	if err != nil {
-		fmt.Printf("Failed to seed user table: %v\n", err)
-	}
-	userPassword := MockUser1.Password
-
-	// mock request JSON payloads
-	correctCredentials := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, user.Email, userPassword)
+	// sample request payloads
+	correctCredentials := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, user.Email, user.Password)
 	wrongPassword := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, user.Email, "wrong password")
 	wrongCredentials := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, "wrong@email.com", "wrong password")
-	invalidEmail := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, "invalid email", userPassword)
-	missingEmail := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, "", userPassword)
+	invalidEmail := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, "invalid email", user.Password)
+	missingEmail := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, "", user.Password)
 	missingPassword := fmt.Sprintf(`{"email": "%v" , "password": "%v"}`, user.Email, "")
 
 	// sample request payloads and responses
@@ -121,9 +109,9 @@ func TestLogin(t *testing.T) {
 	}
 
 	// test the sample requests
-	for _, v := range samples {
+	for _, sample := range samples {
 		// build the request
-		req, err := http.NewRequest("POST", "/login", bytes.NewBufferString(v.inputJSON))
+		req, err := http.NewRequest("POST", "/login", bytes.NewBufferString(sample.inputJSON))
 		if err != nil {
 			t.Errorf("Error calling /login: %v\n", err)
 		}
@@ -132,19 +120,19 @@ func TestLogin(t *testing.T) {
 		handler := http.HandlerFunc(server.Login)
 		handler.ServeHTTP(rr, req)
 
-		assert.Equal(t, rr.Code, v.statusCode)
+		assert.Equal(t, rr.Code, sample.statusCode)
 		// valid request tests
-		if v.statusCode == 200 {
+		if sample.statusCode == 200 {
 			assert.NotEqual(t, rr.Body.String(), "")
 		}
 		// invalid request tests
-		if v.statusCode == 422 && v.errorMessage != "" {
+		if sample.statusCode == 422 && sample.errorMessage != "" {
 			responseMap := make(map[string]interface{})
 			err = json.Unmarshal([]byte(rr.Body.String()), &responseMap)
 			if err != nil {
 				t.Errorf("Cannot convert to json: %v\n", err)
 			}
-			assert.Equal(t, responseMap["error"], v.errorMessage)
+			assert.Equal(t, responseMap["error"], sample.errorMessage)
 		}
 	}
 }

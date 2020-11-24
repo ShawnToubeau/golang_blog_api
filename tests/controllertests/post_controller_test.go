@@ -8,6 +8,7 @@ import (
 	_ "github.com/gorilla/mux"
 	"github.com/shawntoubeau/golang_blog_api/api/models"
 	_ "github.com/shawntoubeau/golang_blog_api/api/models"
+	"github.com/shawntoubeau/golang_blog_api/api/seed"
 	"gopkg.in/go-playground/assert.v1"
 	"log"
 	"net/http"
@@ -17,37 +18,32 @@ import (
 )
 
 func TestCreatePost(t *testing.T) {
-	var AuthEmail, AuthPassword string
-
-	// refresh tables
-	err := refreshTables()
-	if err != nil {
-		log.Fatalf("Failed to refresh tables: %v\n", err)
-	}
-	// seed users
-	users, err := seedUsers()
-	if err != nil {
-		log.Fatalf("Failed to seed users")
-	}
+	// seed test data
+	users, posts := seed.Load(server.DB)
+	fmt.Printf("users: %v\n", users)
+	fmt.Printf("posts: %v\n", posts)
 	// retrieve first user
-	AuthEmail = users[0].Email
-	AuthPassword = MockUser1.Password
+	user := users[0]
+	user.Password = seed.MockUser1.Password
 	// login user to retrieve auth token
-	token, err := server.AuthenticateCredentials(AuthEmail, AuthPassword)
+	token, err := server.AuthenticateCredentials(user.Email, user.Password)
 	if err != nil {
 		log.Fatalf("Failed to login user: %v\n", err)
 	}
 	// format token
 	tokenString := fmt.Sprintf("Bearer %v", token)
 
-	// mock posts
-	post1 := MockPost1(users[0].ID)
-	// mock request payloads
-	validRequest := fmt.Sprintf(`{"title": "%v", "content": "%v", "author_id": %v}`, post1.Title, post1.Content, post1.AuthorID)
-	titleMissing := fmt.Sprintf(`{"title": "", "content": "%v", "author_id": %v}`, post1.Content, post1.AuthorID)
-	contentMissing := fmt.Sprintf(`{"title": "%v", "content": "", "author_id": %v}`, post1.Title, post1.AuthorID)
-	authorIDMissing := fmt.Sprintf(`{"title": "%v", "content": "%v", "author_id": 0}`, post1.Title, post1.Content)
+	fmt.Printf("user: %v\n", user)
 
+	// new post
+	newPost := seed.GenerateNewPost("New Post", "New Post", user.ID)
+	fmt.Printf("new post: %v\n", newPost)
+	// sample request payloads
+	validRequest := fmt.Sprintf(`{"title": "%v", "content": "%v", "author_id": %v}`, newPost.Title, newPost.Content, newPost.AuthorID)
+	titleMissing := fmt.Sprintf(`{"title": "", "content": "%v", "author_id": %v}`, newPost.Content, newPost.AuthorID)
+	contentMissing := fmt.Sprintf(`{"title": "%v", "content": "", "author_id": %v}`, newPost.Title, newPost.AuthorID)
+	authorIDMissing := fmt.Sprintf(`{"title": "%v", "content": "%v", "author_id": 0}`, newPost.Title, newPost.Content)
+	// sample request payloads and responses
 	samples := []struct {
 		inputJSON    string
 		statusCode   int
@@ -61,9 +57,9 @@ func TestCreatePost(t *testing.T) {
 		{
 			validRequest,
 			200,
-			post1.Title,
-			post1.Content,
-			post1.AuthorID,
+			newPost.Title,
+			newPost.Content,
+			newPost.AuthorID,
 			tokenString,
 			"",
 		},
@@ -72,8 +68,8 @@ func TestCreatePost(t *testing.T) {
 			titleMissing,
 			422,
 			"",
-			post1.Content,
-			post1.AuthorID,
+			newPost.Content,
+			newPost.AuthorID,
 			tokenString,
 			"title required",
 		},
@@ -81,9 +77,9 @@ func TestCreatePost(t *testing.T) {
 		{
 			contentMissing,
 			422,
-			post1.Title,
+			newPost.Title,
 			"",
-			post1.AuthorID,
+			newPost.AuthorID,
 			tokenString,
 			"content required",
 		},
@@ -91,8 +87,8 @@ func TestCreatePost(t *testing.T) {
 		{
 			authorIDMissing,
 			422,
-			post1.Title,
-			post1.Content,
+			newPost.Title,
+			newPost.Content,
 			0,
 			tokenString,
 			"author ID required",
@@ -101,9 +97,9 @@ func TestCreatePost(t *testing.T) {
 		{
 			validRequest,
 			500,
-			post1.Title,
-			post1.Content,
-			post1.AuthorID,
+			newPost.Title,
+			newPost.Content,
+			newPost.AuthorID,
 			tokenString,
 			"title already taken",
 		},
@@ -128,6 +124,8 @@ func TestCreatePost(t *testing.T) {
 			fmt.Printf("Cannot convert to JSON: %v\n", err)
 		}
 
+		fmt.Printf("res map: %v\n", responseMap)
+
 		assert.Equal(t, rr.Code, sample.statusCode)
 		// valid request tests
 		if sample.statusCode == 200 {
@@ -143,16 +141,8 @@ func TestCreatePost(t *testing.T) {
 }
 
 func TestFetchPosts(t *testing.T) {
-	// refresh tables
-	err := refreshTables()
-	if err != nil {
-		log.Fatalf("Failed to refresh tables: %v\n", err)
-	}
-	// seed tables
-	_, mockPosts, err := seedUsersAndPosts()
-	if err != nil {
-		log.Fatalf("Failed to seed tables: %v\n", err)
-	}
+	// seed test data
+	_, posts  := seed.Load(server.DB)
 	// create request
 	req, err := http.NewRequest("GET", "/posts", nil)
 	if err != nil {
@@ -164,27 +154,21 @@ func TestFetchPosts(t *testing.T) {
 	// serve request
 	handler.ServeHTTP(rr, req)
 	// create post array and process response
-	var posts []models.Post
-	err = json.Unmarshal([]byte(rr.Body.String()), &posts)
+	var fetchedPosts []models.Post
+	err = json.Unmarshal([]byte(rr.Body.String()), &fetchedPosts)
 	if err != nil {
 		log.Fatalf("Cannot convert to JSON: %v\n", err)
 	}
 
 	assert.Equal(t, rr.Code, http.StatusOK)
-	assert.Equal(t, len(posts), len(mockPosts))
+	assert.Equal(t, len(fetchedPosts), len(posts))
 }
 
 func TestFetchPostById(t *testing.T) {
-	// refresh tables
-	err := refreshTables()
-	if err != nil {
-		log.Fatalf("Failed to refresh tables: %v\n", err)
-	}
-	// seed tables
-	_, posts, err := seedUsersAndPosts()
-	if err != nil {
-		log.Fatalf("Failed to seed tables: %v\n", err)
-	}
+	// seed test data
+	_, posts  := seed.Load(server.DB)
+	// retrieve first post
+	post := posts[0]
 	// sample request payloads and responses
 	samples := []struct {
 		id         string
@@ -194,11 +178,11 @@ func TestFetchPostById(t *testing.T) {
 		authorId   uint32
 	}{
 		{
-			strconv.Itoa(int(posts[0].ID)),
+			strconv.Itoa(int(post.ID)),
 			200,
-			posts[0].Title,
-			posts[0].Content,
-			posts[0].AuthorID,
+			post.Title,
+			post.Content,
+			post.AuthorID,
 		},
 		{
 			"unknown",
@@ -240,39 +224,32 @@ func TestFetchPostById(t *testing.T) {
 }
 
 func TestUpdatePostById(t *testing.T) {
-	var AuthEmail, AuthPassword string
-	var AuthID uint32
-	// refresh tables
-	err := refreshTables()
-	if err != nil {
-		log.Fatalf("Failed to refresh tables: %v\n", err)
-	}
-	// seed tables
-	users, posts, err := seedUsersAndPosts()
-	if err != nil {
-		log.Fatalf("Failed to seed tables: %v\n", err)
-	}
-	fmt.Printf("Users: %v\n", users)
-	fmt.Printf("Posts: %v\n", posts)
+	// seed test data
+	users, posts  := seed.Load(server.DB)
+	// retrieve posts
+	firstPost := posts[0]
+	secondPost := posts[1]
 	// retrieve first post's user
-	AuthID = posts[0].AuthorID
-	AuthEmail = users[0].Email
-	AuthPassword = MockUser1.Password
-	fmt.Printf("User creds: %v %v\n", AuthEmail, AuthPassword)
+	user := firstPost.Author
+	user.Password = seed.GetPostsAuthorsPassword(firstPost.AuthorID)
 
+	fmt.Printf("MockUsers: %v\n", users)
+	fmt.Printf("Posts: %v\n", posts)
+
+	fmt.Printf("User: %v\n", user)
 	// login user to retrieve auth token
-	token, err := server.AuthenticateCredentials(AuthEmail, AuthPassword)
+	token, err := server.AuthenticateCredentials(user.Email, user.Password)
 	if err != nil {
 		log.Fatalf("Failed to login user: %v\n", err)
 	}
 	// build token string
 	tokenString := fmt.Sprintf("Bearer %v", token)
 
-	// mock request JSON payloads
-	validPayload := fmt.Sprintf(`{"title": "%v", "content": "%v", "author_id": %v}`, "new title", "new content", AuthID)
-	missingTitle := fmt.Sprintf(`{"title": "", "content": "%v", "author_id": %v}`, "new content", AuthID)
-	titleTaken := fmt.Sprintf(`{"title": "%v", "content": "%v", "author_id": %v}`, posts[1].Title, "new content", AuthID)
-	missingContent := fmt.Sprintf(`{"title": "%v", "content": "", "author_id": %v}`, "new title", AuthID)
+	// sample request payloads
+	validPayload := fmt.Sprintf(`{"title": "%v", "content": "%v", "author_id": %v}`, "new title", "new content", user.ID)
+	missingTitle := fmt.Sprintf(`{"title": "", "content": "%v", "author_id": %v}`, "new content", user.ID)
+	titleTaken := fmt.Sprintf(`{"title": "%v", "content": "%v", "author_id": %v}`, secondPost.Title, "new content", user.ID)
+	missingContent := fmt.Sprintf(`{"title": "%v", "content": "", "author_id": %v}`, "new title", user.ID)
 
 	// sample request payloads and responses
 	samples := []struct {
@@ -286,7 +263,7 @@ func TestUpdatePostById(t *testing.T) {
 	}{
 		// valid case
 		{
-			strconv.Itoa(int(AuthID)),
+			strconv.Itoa(int(user.ID)),
 			validPayload,
 			200,
 			"new title",
@@ -296,7 +273,7 @@ func TestUpdatePostById(t *testing.T) {
 		},
 		// missing title
 		{
-			strconv.Itoa(int(AuthID)),
+			strconv.Itoa(int(user.ID)),
 			missingTitle,
 			422,
 			"",
@@ -306,7 +283,7 @@ func TestUpdatePostById(t *testing.T) {
 		},
 		// title taken
 		{
-			strconv.Itoa(int(AuthID)),
+			strconv.Itoa(int(user.ID)),
 			titleTaken,
 			500,
 			posts[1].Title,
@@ -316,7 +293,7 @@ func TestUpdatePostById(t *testing.T) {
 		},
 		// missing content
 		{
-			strconv.Itoa(int(AuthID)),
+			strconv.Itoa(int(user.ID)),
 			missingContent,
 			422,
 			"new title",
@@ -326,7 +303,7 @@ func TestUpdatePostById(t *testing.T) {
 		},
 		// missing token
 		{
-			strconv.Itoa(int(AuthID)),
+			strconv.Itoa(int(user.ID)),
 			validPayload,
 			401,
 			"new title",
@@ -336,7 +313,7 @@ func TestUpdatePostById(t *testing.T) {
 		},
 		// missing token
 		{
-			strconv.Itoa(int(AuthID)),
+			strconv.Itoa(int(user.ID)),
 			validPayload,
 			401,
 			"new title",
@@ -401,24 +378,13 @@ func TestUpdatePostById(t *testing.T) {
 }
 
 func TestDeletePost(t *testing.T) {
-	var AuthEmail, AuthPassword string
-	var AuthID uint32
-	// refresh tables
-	err := refreshTables()
-	if err != nil {
-		log.Fatalf("Failed to refresh tables: %v\n", err)
-	}
-	// seed tables
-	users, _, err := seedUsersAndPosts()
-	if err != nil {
-		log.Fatalf("Failed to seed tables: %v\n", err)
-	}
-	// get first users credentials
-	AuthID = users[0].ID
-	AuthEmail = users[0].Email
-	AuthPassword = MockUser1.Password
+	// seed test data
+	users, _  := seed.Load(server.DB)
+	// retrieve first user
+	user := users[0]
+	user.Password = seed.MockUser1.Password
 	// login the user to get their auth token
-	token, err := server.AuthenticateCredentials(AuthEmail, AuthPassword)
+	token, err := server.AuthenticateCredentials(user.Email, user.Password)
 	if err != nil {
 		log.Fatalf("Failed to login user: %v\n", err)
 	}
@@ -434,21 +400,21 @@ func TestDeletePost(t *testing.T) {
 	}{
 		// Valid
 		{
-			strconv.Itoa(int(AuthID)),
+			strconv.Itoa(int(user.ID)),
 			tokenString,
 			204,
 			"",
 		},
 		// Missing token string
 		{
-			strconv.Itoa(int(AuthID)),
+			strconv.Itoa(int(user.ID)),
 			"",
 			401,
 			"token contains an invalid number of segments",
 		},
 		// Incorrect token string
 		{
-			strconv.Itoa(int(AuthID)),
+			strconv.Itoa(int(user.ID)),
 			"incorrect token string",
 			401,
 			"token contains an invalid number of segments",
@@ -492,7 +458,6 @@ func TestDeletePost(t *testing.T) {
 			if err != nil {
 				t.Errorf("Cannot convert to json: %v\n", err)
 			}
-			fmt.Printf("res map: %v\n", responseMap)
 			assert.Equal(t, responseMap["error"], sample.errorMessage)
 		}
 	}

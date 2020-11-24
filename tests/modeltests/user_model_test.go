@@ -10,9 +10,9 @@ import (
 
 // Fetch all users.
 func TestFetchAllUsers(t *testing.T) {
-	err := refreshTables()
-	if err != nil {
-		log.Fatalf("Failed to refresh tables: %v\n", err)
+	strErr := refreshTables()
+	if strErr != "" {
+		log.Fatalf("Failed to refresh user table: %v\n", strErr)
 	}
 
 	numUsers, err := seedUsers()
@@ -31,9 +31,9 @@ func TestFetchAllUsers(t *testing.T) {
 
 // Insert a new user.
 func TestInsertUser(t *testing.T) {
-	err := refreshTables()
-	if err != nil {
-		log.Fatalf("Failed to refresh tables: %v\n", err)
+	strErr := refreshTables()
+	if strErr != "" {
+		log.Fatalf("Failed to refresh user table: %v\n", strErr)
 	}
 
 	newUser := MockUser1
@@ -50,9 +50,9 @@ func TestInsertUser(t *testing.T) {
 
 // Fetch user by a specific ID.
 func TestGetUserById(t *testing.T) {
-	err := refreshTables()
-	if err != nil {
-		log.Fatalf("Failed to refresh tables: %v\n", err)
+	strErr := refreshTables()
+	if strErr != "" {
+		log.Fatalf("Failed to refresh user table: %v\n", strErr)
 	}
 
 	user, err := seedOneUser()
@@ -72,9 +72,9 @@ func TestGetUserById(t *testing.T) {
 
 // Update user by specific ID.
 func TestUpdateUserById(t *testing.T) {
-	err := refreshTables()
-	if err != nil {
-		log.Fatalf("Failed to refresh tables: %v\n", err)
+	strErr := refreshTables()
+	if strErr != "" {
+		log.Fatalf("Failed to refresh user table: %v\n", strErr)
 	}
 
 	user, err := seedOneUser()
@@ -97,9 +97,9 @@ func TestUpdateUserById(t *testing.T) {
 
 // Delete specific post by ID.
 func TestDeleteUserById(t *testing.T) {
-	err := refreshTables()
-	if err != nil {
-		log.Fatalf("Failed to refresh tables: %v\n", err)
+	strErr := refreshTables()
+	if strErr != "" {
+		log.Fatalf("Failed to refresh user table: %v\n", strErr)
 	}
 
 	user, err := seedOneUser()
