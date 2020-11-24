@@ -16,7 +16,7 @@ func Run() {
 	// load environment variables
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatalf("Error getting env: %v", err)
+		log.Fatalf("Error getting env: %v\n", err)
 	} else {
 		fmt.Println("Pulling env variables")
 	}

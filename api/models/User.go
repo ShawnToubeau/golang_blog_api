@@ -3,8 +3,8 @@ package models
 import (
 	"errors"
 	"github.com/badoux/checkmail"
-	"github.com/jinzhu/gorm"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 	"html"
 	"log"
 	"strings"
@@ -159,7 +159,7 @@ func (u *User) FetchUserByID(db *gorm.DB, uid uint32) (*User, error) {
 	if err != nil {
 		return &User{}, err
 	}
-	if gorm.IsRecordNotFoundError(err) {
+	if err == gorm.ErrRecordNotFound {
 		return &User{}, errors.New("user not found")
 	}
 
@@ -174,14 +174,13 @@ func (u *User) UpdateUserByID(db *gorm.DB, uid uint32) (*User, error) {
 		log.Fatal(err)
 	}
 	// update user fields
-	db = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&User{}).UpdateColumn(
-		map[string]interface{}{
-			"password":   u.Password,
-			"nickname":   u.Nickname,
-			"email":      u.Email,
-			"updated_at": time.Now(),
-		},
-	)
+	db = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&User{}).Updates(
+		User{
+			Nickname:  u.Nickname,
+			Email:     u.Email,
+			Password:  u.Password,
+			UpdatedAt: time.Time{},
+		})
 	if db.Error != nil {
 		return &User{}, db.Error
 	}

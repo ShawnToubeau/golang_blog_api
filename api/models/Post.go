@@ -2,7 +2,7 @@ package models
 
 import (
 	"errors"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 	"html"
 	"strings"
 	"time"
@@ -124,7 +124,7 @@ func (p *Post) DeletePostById(db *gorm.DB, pid uint64, uid uint32) (int64, error
 	// delete post with matching ID and author ID
 	db = db.Debug().Model(&Post{}).Where("id = ? and author_id = ?", pid, uid).Take(&Post{}).Delete(&Post{})
 	if db.Error != nil {
-		if gorm.IsRecordNotFoundError(db.Error) {
+		if db.Error == gorm.ErrRecordNotFound {
 			return 0, errors.New("post not found")
 		}
 		return 0, db.Error

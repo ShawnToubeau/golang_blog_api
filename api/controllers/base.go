@@ -3,9 +3,9 @@ package controllers
 import (
 	"fmt"
 	"github.com/gorilla/mux"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/shawntoubeau/golang_blog_api/api/models"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"log"
 	"net/http"
 )
@@ -21,23 +21,17 @@ func (server *Server) Initialize(DbDriver, DbUser, DbPassword, DbPort, DbHost, D
 	var err error
 	var DBURL string
 
-	// MySQL database connection string
-	if DbDriver == "mysql" {
-		DBURL = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local", DbUser, DbPassword, DbHost, DbPort, DbName)
-	}
-
 	// PostgreSQL database connection string
 	if DbDriver == "postgres" {
 		DBURL = fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable password=%s", DbHost, DbPort, DbUser, DbName, DbPassword)
 	}
 
 	// open a connection to the database and set the reference on the server object
-	server.DB, err = gorm.Open(DbDriver, DBURL)
+	server.DB, err = gorm.Open(postgres.Open(DBURL), &gorm.Config{})
 	if err != nil {
-		fmt.Printf("Cannot connect to %s database", DbDriver)
 		log.Fatalf("Connection error: %v\n", err)
 	} else {
-		fmt.Printf("We are connected to the %s database", DbDriver)
+		fmt.Printf("We are connected to the %s database\n", DbDriver)
 	}
 
 	// migrate user and post model
