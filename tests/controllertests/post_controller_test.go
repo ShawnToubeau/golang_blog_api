@@ -19,9 +19,7 @@ import (
 
 func TestCreatePost(t *testing.T) {
 	// seed test data
-	users, posts := seed.Load(server.DB)
-	fmt.Printf("users: %v\n", users)
-	fmt.Printf("posts: %v\n", posts)
+	users, _ := seed.Load(server.DB)
 	// retrieve first user
 	user := users[0]
 	user.Password = seed.MockUser1.Password
@@ -33,11 +31,8 @@ func TestCreatePost(t *testing.T) {
 	// format token
 	tokenString := fmt.Sprintf("Bearer %v", token)
 
-	fmt.Printf("user: %v\n", user)
-
 	// new post
 	newPost := seed.GenerateNewPost("New Post", "New Post", user.ID)
-	fmt.Printf("new post: %v\n", newPost)
 	// sample request payloads
 	validRequest := fmt.Sprintf(`{"title": "%v", "content": "%v", "author_id": %v}`, newPost.Title, newPost.Content, newPost.AuthorID)
 	titleMissing := fmt.Sprintf(`{"title": "", "content": "%v", "author_id": %v}`, newPost.Content, newPost.AuthorID)
@@ -123,8 +118,6 @@ func TestCreatePost(t *testing.T) {
 		if err != nil {
 			fmt.Printf("Cannot convert to JSON: %v\n", err)
 		}
-
-		fmt.Printf("res map: %v\n", responseMap)
 
 		assert.Equal(t, rr.Code, sample.statusCode)
 		// valid request tests
@@ -225,7 +218,7 @@ func TestFetchPostById(t *testing.T) {
 
 func TestUpdatePostById(t *testing.T) {
 	// seed test data
-	users, posts  := seed.Load(server.DB)
+	_, posts  := seed.Load(server.DB)
 	// retrieve posts
 	firstPost := posts[0]
 	secondPost := posts[1]
@@ -233,10 +226,6 @@ func TestUpdatePostById(t *testing.T) {
 	user := firstPost.Author
 	user.Password = seed.GetPostsAuthorsPassword(firstPost.AuthorID)
 
-	fmt.Printf("MockUsers: %v\n", users)
-	fmt.Printf("Posts: %v\n", posts)
-
-	fmt.Printf("User: %v\n", user)
 	// login user to retrieve auth token
 	token, err := server.AuthenticateCredentials(user.Email, user.Password)
 	if err != nil {

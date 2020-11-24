@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	//"github.com/jinzhu/gorm"
 	"github.com/joho/godotenv"
 	"github.com/shawntoubeau/golang_blog_api/api/controllers"
 	"github.com/shawntoubeau/golang_blog_api/api/models"
