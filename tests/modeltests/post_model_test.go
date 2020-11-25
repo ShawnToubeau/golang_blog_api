@@ -1,24 +1,17 @@
 package modeltests
 
 import (
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/shawntoubeau/golang_blog_api/api/seed"
 	"gopkg.in/go-playground/assert.v1"
-	"log"
+	_ "gorm.io/driver/postgres"
 	"testing"
 )
 
 // Fetch all posts.
 func TestFetchAllPosts(t *testing.T) {
-	strErr := refreshTables()
-	if strErr != "" {
-		log.Fatalf("Failed to refresh user table: %v\n", strErr)
-	}
-
-	_, posts, err := seedUsersAndPosts()
-	if err != nil {
-		log.Fatalf("Failed to seed post and user: %v\n", err)
-	}
-
+	// seed test data
+	_, posts := seed.Load(server.DB)
+	// fetch posts
 	fetchedPosts, err := postInstance.FetchAllPosts(server.DB)
 	if err != nil {
 		t.Errorf("Failed to fetch posts: %v\n", err)
@@ -29,18 +22,12 @@ func TestFetchAllPosts(t *testing.T) {
 
 // Insert a post.
 func TestInsertPost(t *testing.T) {
-	strErr := refreshTables()
-	if strErr != "" {
-		log.Fatalf("Failed to refresh user table: %v\n", strErr)
-	}
-
-	user, err := seedOneUser()
-	if err != nil {
-		log.Fatalf("Failed to save user to database: %v\n", err)
-	}
-
+	// seed test data
+	users, _ := seed.Load(server.DB)
+	// retrieve the first user
+	user := users[0]
 	// create and save post
-	newPost := MockPost1(user.ID)
+	newPost := seed.GenerateNewPost("New post", "New Content", user.ID)
 	savedPost, err := newPost.InsertPost(server.DB)
 	if err != nil {
 		t.Errorf("Failed to save post to database: %v\n", err)
@@ -55,16 +42,11 @@ func TestInsertPost(t *testing.T) {
 
 // Fetch a specific post by it's ID.
 func TestFetchPostById(t *testing.T) {
-	strErr := refreshTables()
-	if strErr != "" {
-		log.Fatalf("Failed to refresh user table: %v\n", strErr)
-	}
-
-	_, post, err := seedOneUserAndOnePost()
-	if err != nil {
-		log.Fatalf("Failed to seed user and post tables: %v\n", err)
-	}
-
+	// seed test data
+	_, posts := seed.Load(server.DB)
+	// retrieve first post
+	post := posts[0]
+	// fetch first post
 	fetchedPost, err := postInstance.FetchPostById(server.DB, post.ID)
 	if err != nil {
 		t.Errorf("Failed to fetch post by ID: %v\n", err)
@@ -79,43 +61,32 @@ func TestFetchPostById(t *testing.T) {
 
 // Update a post by it's ID.
 func TestUpdatePostById(t *testing.T) {
-	strErr := refreshTables()
-	if strErr != "" {
-		log.Fatalf("Failed to refresh user table: %v\n", strErr)
-	}
-
-	_, post, err := seedOneUserAndOnePost()
-	if err != nil {
-		log.Fatalf("Failed to see user and post: %v\n", err)
-	}
-
-	editedPost := post
-	editedPost.Title = "New Title"
-	editedPost.Content = "New Content"
-
-	updatedPost, err := editedPost.UpdatePostById(server.DB)
+	// seed test data
+	_, posts := seed.Load(server.DB)
+	// retrieve first post
+	post := posts[0]
+	// edit post content
+	post.Title = "New Title"
+	post.Content = "New Content"
+	// update post
+	updatedPost, err := post.UpdatePostById(server.DB)
 	if err != nil {
 		t.Errorf("Failed to update post by ID: %v\n", err)
 		return
 	}
-	assert.Equal(t, editedPost.ID, updatedPost.ID)
-	assert.Equal(t, editedPost.AuthorID, updatedPost.AuthorID)
-	assert.Equal(t, editedPost.Content, updatedPost.Content)
-	assert.Equal(t, editedPost.Title, updatedPost.Title)
+	assert.Equal(t, post.ID, updatedPost.ID)
+	assert.Equal(t, post.AuthorID, updatedPost.AuthorID)
+	assert.Equal(t, post.Content, updatedPost.Content)
+	assert.Equal(t, post.Title, updatedPost.Title)
 }
 
 // Delete a specific post by it's ID.
 func TestDeletePostById(t *testing.T) {
-	strErr := refreshTables()
-	if strErr != "" {
-		log.Fatalf("Failed to refresh user table: %v\n", strErr)
-	}
-
-	_, post, err := seedOneUserAndOnePost()
-	if err != nil {
-		log.Fatalf("Failed to seed user and post: %v\n", err)
-	}
-
+	// seed test data
+	_, posts := seed.Load(server.DB)
+	// retrieve first post
+	post := posts[0]
+	// delete post
 	isDeleted, err := postInstance.DeletePostById(server.DB, post.ID, post.AuthorID)
 	if err != nil {
 		t.Errorf("Failed to delete user by ID: %v\n", err)
