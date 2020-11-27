@@ -10,7 +10,7 @@ import (
 
 // mock MockUsers
 var MockUser1 = models.User{
-	Nickname: "Swan",
+	Nickname: "Shawn",
 	Email:    "shawn@aol.com",
 	Password: "123",
 }
@@ -38,9 +38,9 @@ var MockPosts = []models.Post{
 	MockPost2,
 }
 
-func GetPostsAuthorsPassword(authorId uint32) string {
+func GetUsersPassword(userEmail string) string {
 	for _, user := range MockUsers {
-		if user.ID == authorId {
+		if user.Email == userEmail {
 			return user.Password
 		}
 	}

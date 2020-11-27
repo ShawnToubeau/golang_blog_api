@@ -402,13 +402,6 @@ func TestDeleteUser(t *testing.T) {
 		stateCode    int
 		errorMessage string
 	}{
-		// User contains linked posts
-		{
-			strconv.Itoa(int(user.ID)),
-			tokenString,
-			500,
-			"ERROR: update or delete on table \"users\" violates foreign key constraint \"fk_posts_author\" on table \"posts\" (SQLSTATE 23503)",
-		},
 		// Valid
 		{
 			strconv.Itoa(int(user.ID)),
@@ -446,8 +439,13 @@ func TestDeleteUser(t *testing.T) {
 		},
 	}
 
+	// delete all posts to avoid any foreign key constraints
+	for _, post := range posts {
+		_, _ = post.DeletePostById(server.DB, post.ID, post.AuthorID)
+	}
+
 	// test each sample request payload
-	for i, sample := range samples {
+	for _, sample := range samples {
 		// build the request
 		req, err := http.NewRequest("DELETE", "/users", nil)
 		if err != nil {
@@ -472,14 +470,6 @@ func TestDeleteUser(t *testing.T) {
 				t.Errorf("Cannot convert to json: %v\n", err)
 			}
 			assert.Equal(t, responseMap["error"], sample.errorMessage)
-
-			// delete all posts so there will no foreign key violations
-			// when trying to delete the user again
-			if i == 0 {
-				for _, post := range posts {
-					post.DeletePostById(server.DB, post.ID, post.AuthorID)
-				}
-			}
 		}
 	}
 }

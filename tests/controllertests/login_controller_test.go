@@ -16,6 +16,7 @@ import (
 func TestSignIn(t *testing.T) {
 	// seed test data
 	users, _ := seed.Load(server.DB)
+	// retrieve first user
 	user := users[0]
 	user.Password = seed.MockUser1.Password
 

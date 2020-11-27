@@ -1,7 +1,6 @@
-FROM golang:1.12-alpine
+FROM golang:alpine
 
 # Install git
-
 RUN apk update && apk add --no-cache git
 
 WORKDIR /app
@@ -13,5 +12,6 @@ RUN go mod download
 # Copy the source from the current directory to the working Directory inside the container 
 COPY . .
 
-# Run tests
-CMD CGO_ENABLED=0 go test -v  ./...
+# Run tests (NOTE: need to run each test directory separately or there will be race conditions when accessing the DB)
+CMD CGO_ENABLED=0 go test -v  ./tests/controllertests
+CMD CGO_ENABLED=0 go test -v  ./tests/modeltests

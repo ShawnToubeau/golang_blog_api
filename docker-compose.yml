@@ -9,7 +9,7 @@ services:
     environment:
       API_SECRET: ${API_SECRET}
       DB_DRIVER: ${DB_DRIVER}
-      DB_HOST: "db"
+      DB_HOST: "db" # db service name
       DB_PORT: ${DB_PORT}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
