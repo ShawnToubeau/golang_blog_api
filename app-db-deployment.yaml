@@ -1,0 +1,26 @@
+#apiVersion: apps/v1
+#kind: Deployment
+#metadata:
+#  name: db
+#  labels:
+#    app: db
+#spec:
+#  replicas: 1
+#  selector:
+#    matchLabels:
+#      app: db
+#  template:
+#    metadata:
+#      labels:
+#        name: db
+#    spec:
+#      containers:
+#        - name: db
+#          image: shawntoubeau/go_blog_app:blog_app
+#          imagePullPolicy: IfNotPresent
+#          ports:
+#            - name: http
+#              containerPort: 8080
+#          envFrom:
+#            - secretRef:
+#                name: postgres-secret
