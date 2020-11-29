@@ -1,4 +1,5 @@
 .env
+postgres-secret.yaml
 
 # docker db files
 /db_postgres/**
